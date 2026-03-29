@@ -1,5 +1,6 @@
 const WORLD_WIDTH = 960;
 const WORLD_HEIGHT = 540;
+const SAVE_PREFIX = 'cat_game_save_';
 
 const CHARACTER_SKINS = {
   orange: { idle: 'kittenIdle', run: 'kittenRun', eat: 'kittenEat' },
@@ -80,6 +81,9 @@ export class MainScene extends Phaser.Scene {
     this.zombiesEnabled = false;
     this.backgroundElements = [];
     this.audioCtx = null;
+    this.runMode = 'new';
+    this.loadedState = null;
+    this.autosaveEvent = null;
   }
 
   init(data) {
@@ -87,6 +91,22 @@ export class MainScene extends Phaser.Scene {
     this.currentModeKey = data.mode ?? 'medium';
     this.currentThemeKey = data.theme ?? 'day';
     this.zombiesEnabled = !!data.zombies;
+    this.runMode = data.runMode ?? 'new';
+    this.loadedState = this.runMode === 'continue' ? this.loadCharacterSave(this.currentCharacterKey) : null;
+
+    if (this.runMode === 'continue' && this.loadedState) {
+      this.currentModeKey = this.loadedState.mode ?? this.currentModeKey;
+      this.currentThemeKey = this.loadedState.theme ?? this.currentThemeKey;
+      this.zombiesEnabled = !!this.loadedState.zombies;
+      this.foodPoints = this.loadedState.foodPoints ?? 0;
+      this.foodCaught = this.loadedState.foodCaught ?? 0;
+      this.sizeMultiplier = this.loadedState.sizeMultiplier ?? 1;
+    } else if (this.runMode === 'new') {
+      this.clearCharacterSave(this.currentCharacterKey);
+      this.foodPoints = 0;
+      this.foodCaught = 0;
+      this.sizeMultiplier = 1;
+    }
   }
 
   create() {
@@ -113,8 +133,10 @@ export class MainScene extends Phaser.Scene {
     this.zombieGroup = this.physics.add.group({ collideWorldBounds: false, maxSize: 40 });
 
     this.physics.add.overlap(this.kitten, this.pizzaGroup, this.handlePizzaCaught, null, this);
+    this.physics.add.collider(this.pizzaGroup, this.ground, this.handleFoodHitGround, null, this);
     this.physics.add.collider(this.zombieGroup, this.ground);
     this.physics.add.collider(this.kitten, this.zombieGroup, this.handleZombieCollision, null, this);
+    this.physics.add.overlap(this.zombieGroup, this.pizzaGroup, this.handleZombieEatFood, null, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
@@ -128,10 +150,23 @@ export class MainScene extends Phaser.Scene {
     this.ensureZombieTexture();
     this.applyTheme(this.currentThemeKey);
 
+    if (this.loadedState) {
+      this.kitten.setScale(this.sizeMultiplier);
+      this.kitten.body.setSize(16 * this.sizeMultiplier, 12 * this.sizeMultiplier, true);
+    }
+
     this.schedulePizzaDrops();
     if (this.zombiesEnabled) {
       this.scheduleZombieSpawns();
     }
+
+    this.autosaveEvent = this.time.addEvent({
+      delay: 1800,
+      loop: true,
+      callback: () => this.saveCharacterState(),
+    });
+
+    this.updateHud();
   }
 
   createBackground() {
@@ -275,6 +310,8 @@ export class MainScene extends Phaser.Scene {
 
     food.foodValue = 1;
     food.caught = false;
+    food.onGround = false;
+    food.groundTimer = null;
     food.setTexture('pizza');
     food.setActive(true);
     food.setVisible(true);
@@ -312,12 +349,15 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.time.delayedCall(Math.round(duration * 0.46), () => {
+      this.playDogBarkSound();
       const food = this.pizzaGroup.get(this.pizzaPlane.x, this.pizzaPlane.y + 16, 'pizzaWhole');
       if (!food) {
         return;
       }
       food.foodValue = 5;
       food.caught = false;
+      food.onGround = false;
+      food.groundTimer = null;
       food.setTexture('pizzaWhole');
       food.setActive(true);
       food.setVisible(true);
@@ -350,6 +390,42 @@ export class MainScene extends Phaser.Scene {
     zombie.setDepth(7);
     zombie.setFlipX(!fromLeft);
     zombie.alive = true;
+    zombie.growthScale = 1;
+  }
+
+  handleFoodHitGround(food) {
+    if (!food.active || food.caught || food.onGround) {
+      return;
+    }
+
+    food.onGround = true;
+    food.foodValue = Math.max(0.5, (food.foodValue || 1) * 0.5);
+    food.setAngularVelocity(0);
+    food.setVelocityX((food.body.velocity.x || 0) * 0.2);
+
+    food.groundTimer = this.time.delayedCall(3000, () => {
+      if (food.active && !food.caught) {
+        food.disableBody(true, true);
+      }
+    });
+  }
+
+  handleZombieEatFood(zombie, food) {
+    if (!zombie.active || !zombie.alive || !food.active || food.caught) {
+      return;
+    }
+
+    food.caught = true;
+    if (food.groundTimer) {
+      food.groundTimer.remove(false);
+      food.groundTimer = null;
+    }
+
+    const value = food.foodValue || 1;
+    food.disableBody(true, true);
+
+    zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.08 * value, 1, 2.6);
+    zombie.setScale(zombie.growthScale);
   }
 
   handlePizzaCaught(kitten, food) {
@@ -381,6 +457,10 @@ export class MainScene extends Phaser.Scene {
 
   consumeFood(food) {
     const growthValue = food.foodValue || 1;
+    if (food.groundTimer) {
+      food.groundTimer.remove(false);
+      food.groundTimer = null;
+    }
     food.disableBody(true, true);
 
     this.foodCaught += 1;
@@ -402,6 +482,8 @@ export class MainScene extends Phaser.Scene {
     if (this.foodCaught % 2 === 0) {
       this.schedulePizzaDrops();
     }
+
+    this.saveCharacterState();
   }
 
   handleZombieCollision(kitten, zombie) {
@@ -416,6 +498,13 @@ export class MainScene extends Phaser.Scene {
       kitten.setVelocityY(-320);
       this.showCatchPopup(kitten.x, kitten.y - 38, 'STOMP!');
       this.playZombieStompSound();
+      this.foodPoints += 2;
+      this.foodCaught += 1;
+      this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
+      this.kitten.setScale(this.sizeMultiplier);
+      this.kitten.body.setSize(16 * this.sizeMultiplier, 12 * this.sizeMultiplier, true);
+      this.updateHud();
+      this.saveCharacterState();
       return;
     }
 
@@ -426,6 +515,7 @@ export class MainScene extends Phaser.Scene {
     kitten.setVelocityX(kitten.x < zombie.x ? -220 : 220);
     this.updateHud();
     this.showCatchPopup(kitten.x, kitten.y - 45, 'OUCH!');
+    this.saveCharacterState();
   }
 
   getSizeMultiplier(foodPoints) {
@@ -528,6 +618,65 @@ export class MainScene extends Phaser.Scene {
     osc.stop(now + 1.15);
   }
 
+  playDogBarkSound() {
+    if (!this.audioCtx) {
+      return;
+    }
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    const now = this.audioCtx.currentTime;
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(380, now + 0.05);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.085, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+    osc.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  getSaveKey(characterKey) {
+    return `${SAVE_PREFIX}${characterKey}`;
+  }
+
+  loadCharacterSave(characterKey) {
+    try {
+      const raw = localStorage.getItem(this.getSaveKey(characterKey));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  saveCharacterState() {
+    const payload = {
+      character: this.currentCharacterKey,
+      mode: this.currentModeKey,
+      theme: this.currentThemeKey,
+      zombies: this.zombiesEnabled,
+      foodPoints: this.foodPoints,
+      foodCaught: this.foodCaught,
+      sizeMultiplier: this.sizeMultiplier,
+      updatedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(this.getSaveKey(this.currentCharacterKey), JSON.stringify(payload));
+    } catch (_err) {
+      // ignore quota/storage issues in prototype
+    }
+  }
+
+  clearCharacterSave(characterKey) {
+    try {
+      localStorage.removeItem(this.getSaveKey(characterKey));
+    } catch (_err) {
+      // ignore storage availability issues
+    }
+  }
+
   playZombieStompSound() {
     if (!this.audioCtx) {
       return;
@@ -571,6 +720,7 @@ export class MainScene extends Phaser.Scene {
 
   update(_time, delta) {
     if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
+      this.saveCharacterState();
       this.scene.start('TitleScene');
       return;
     }

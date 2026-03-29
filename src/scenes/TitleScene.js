@@ -20,6 +20,8 @@ const THEME_OPTIONS = {
   night: { label: 'Night' },
 };
 
+const SAVE_PREFIX = 'cat_game_save_';
+
 export class TitleScene extends Phaser.Scene {
   constructor() {
     super('TitleScene');
@@ -27,6 +29,7 @@ export class TitleScene extends Phaser.Scene {
     this.selectedMode = null;
     this.selectedTheme = null;
     this.selectedZombies = null;
+    this.selectedRunMode = null;
     this.optionButtons = {};
   }
 
@@ -138,7 +141,7 @@ export class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(17);
 
-    this.add.text(W / 2, panelY + 20, '3) Theme   4) Zombies', {
+    this.add.text(W / 2, panelY + 20, '3) Theme   4) Zombies   5) Session', {
       ...TEXT_STYLE,
       fontSize: '18px',
       color: '#cde1ff',
@@ -161,6 +164,10 @@ export class TitleScene extends Phaser.Scene {
       this.selectedZombies = value;
     }, W / 2 + 150);
 
+    this.createOptionRow('session', ['new', 'continue'], { new: { label: 'New' }, continue: { label: 'Continue' } }, panelY + 48, (value) => {
+      this.selectedRunMode = value;
+    }, W / 2 + 360);
+
     this.startButton = this.add.rectangle(W / 2, panelY + 92, 280, 44, 0x4d596b, 1)
       .setDepth(17)
       .setStrokeStyle(3, 0x9bc4ff, 0.5);
@@ -177,6 +184,14 @@ export class TitleScene extends Phaser.Scene {
         this._start();
       }
     });
+
+    this.sessionHint = this.add.text(W / 2 + 360, panelY + 77, 'Pick character to check save', {
+      ...TEXT_STYLE,
+      fontSize: '12px',
+      color: '#d2dbeb',
+      strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(18);
+
     this.updateStartButtonState();
   }
 
@@ -221,6 +236,9 @@ export class TitleScene extends Phaser.Scene {
         box.selected = true;
         box.setFillStyle(0x3b8a5f);
         onSelect(key);
+        if (groupName === 'character') {
+          this.refreshContinueAvailability();
+        }
         this.updateStartButtonState();
       });
 
@@ -229,19 +247,61 @@ export class TitleScene extends Phaser.Scene {
   }
 
   canStart() {
-    return !!(this.selectedCharacter && this.selectedMode && this.selectedTheme && this.selectedZombies);
+    if (!(this.selectedCharacter && this.selectedMode && this.selectedTheme && this.selectedZombies && this.selectedRunMode)) {
+      return false;
+    }
+
+    if (this.selectedRunMode === 'continue') {
+      return this.hasSaveForCharacter(this.selectedCharacter);
+    }
+
+    return true;
   }
 
   updateStartButtonState() {
     if (this.canStart()) {
       this.startButton.setFillStyle(0xff9a3d);
-      this.startText.setText('Start Game');
+      this.startText.setText(this.selectedRunMode === 'continue' ? 'Continue Game' : 'Start New Game');
       this.startText.setColor('#111111');
     } else {
       this.startButton.setFillStyle(0x4d596b);
       this.startText.setText('Select All Options');
       this.startText.setColor('#c6d0dd');
     }
+  }
+
+  getSaveKey(characterKey) {
+    return `${SAVE_PREFIX}${characterKey}`;
+  }
+
+  hasSaveForCharacter(characterKey) {
+    if (!characterKey) {
+      return false;
+    }
+    try {
+      return !!localStorage.getItem(this.getSaveKey(characterKey));
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  refreshContinueAvailability() {
+    const hasSave = this.hasSaveForCharacter(this.selectedCharacter);
+    const row = this.optionButtons.session || [];
+
+    for (let i = 0; i < row.length; i += 1) {
+      const entry = row[i];
+      if (entry.key === 'continue') {
+        entry.box.alpha = hasSave ? 1 : 0.45;
+        if (!hasSave && entry.box.selected) {
+          entry.box.selected = false;
+          entry.box.setFillStyle(0x283c5c);
+          this.selectedRunMode = null;
+        }
+      }
+    }
+
+    this.sessionHint.setText(hasSave ? 'Save found for selected character' : 'No save for selected character');
   }
 
   _startHeliHover() {
@@ -292,6 +352,7 @@ export class TitleScene extends Phaser.Scene {
       mode: this.selectedMode,
       theme: this.selectedTheme,
       zombies: this.selectedZombies === 'on',
+      runMode: this.selectedRunMode,
     });
   }
 }
