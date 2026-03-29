@@ -80,6 +80,7 @@ const ENEMY_SETTINGS = {
 };
 
 const CHARACTER_HITBOX = { width: 16, height: 12, offsetX: 8, offsetY: 14 };
+const GROWTH_SAVE_PREFIX = 'cat_game_growth_';
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -112,9 +113,9 @@ export class MainScene extends Phaser.Scene {
     this.flashlightBatteryMax = 100;
     this.flashlightBattery = 100;
     this.flashlightDrainPerSec = this.flashlightBatteryMax / 60;
-    this.jetpackFuelMax = 100;
-    this.jetpackFuel = 100;
-    this.jetpackFuelDrainPerSec = this.jetpackFuelMax / 25;
+    this.jetpackFuelMax = 10;
+    this.jetpackFuel = 10;
+    this.jetpackFuelDrainPerSec = this.jetpackFuelMax / 10;
     this.jetpackThrustPerSec = 920;
     this.jetpackMaxLiftSpeed = -340;
     this.flashlightOn = true;
@@ -152,6 +153,13 @@ export class MainScene extends Phaser.Scene {
       this.foodPoints = 0;
       this.foodCaught = 0;
       this.sizeMultiplier = 1;
+    }
+
+    // Keep each cat's growth persistent even when starting a new session.
+    const growthState = this.loadGrowthState(this.currentCharacterKey);
+    if (growthState) {
+      this.foodPoints = growthState.foodPoints ?? this.foodPoints;
+      this.sizeMultiplier = growthState.sizeMultiplier ?? this.sizeMultiplier;
     }
 
     this.zombiesEnabled = this.currentEnemyType !== 'off';
@@ -279,9 +287,21 @@ export class MainScene extends Phaser.Scene {
         this.backgroundElements.push(cityBackdrop);
       }
 
+      const skylineBaseY = Math.floor(WORLD_HEIGHT * 0.75);
+      const asphalt = this.add.rectangle(WORLD_WIDTH / 2, skylineBaseY + 14, WORLD_WIDTH, 44, 0x262a32, 0.9).setDepth(2);
+      const laneStripe = this.add.rectangle(WORLD_WIDTH / 2, skylineBaseY + 14, WORLD_WIDTH, 3, 0xc9c9bf, 0.55).setDepth(2);
+      this.backgroundElements.push(asphalt, laneStripe);
+
+      for (let i = 0; i < 7; i += 1) {
+        const tx = 90 + i * 170;
+        const trunk = this.add.rectangle(tx, skylineBaseY - 8, 8, 18, 0x5b3a25, 0.95).setDepth(3);
+        const leaves = this.add.circle(tx, skylineBaseY - 22, 13, 0x4f9650, 0.95).setDepth(3);
+        this.backgroundElements.push(trunk, leaves);
+      }
+
       // Add simple looping road traffic behind gameplay sprites.
       for (let i = 0; i < 4; i += 1) {
-        const y = WORLD_HEIGHT - 150 + i * 10;
+        const y = skylineBaseY + 6 + i * 7;
         const speed = 3800 + i * 700;
         const color = [0xe04444, 0x44a6e0, 0xf0c547, 0xa35de6][i % 4];
         const fromLeft = i % 2 === 0;
@@ -504,6 +524,7 @@ export class MainScene extends Phaser.Scene {
 
   spawnSliceFromHelicopter() {
     const mode = this.getCurrentMode();
+    const moonFallScale = this.currentMapKey === 'moon' ? 1 / 3 : 1;
     const variance = Phaser.Math.Clamp(34 + this.foodCaught * 0.7, 34, 140);
     const x = Phaser.Math.Clamp(this.chefHeli.x + Phaser.Math.Between(-variance, variance), 24, WORLD_WIDTH - 24);
 
@@ -513,6 +534,8 @@ export class MainScene extends Phaser.Scene {
     }
 
     food.foodValue = 1;
+    food.baseFoodValue = 1;
+    food.sourceType = 'slice';
     food.caught = false;
     food.onGround = false;
     food.groundTimer = null;
@@ -526,8 +549,8 @@ export class MainScene extends Phaser.Scene {
     food.body.enable = true;
     food.body.setAllowGravity(true);
     food.setScale(mode.foodScale);
-    food.setVelocity(Phaser.Math.Between(-30, 30), Phaser.Math.Between(mode.minFallVelocity, mode.maxFallVelocity));
-    food.setGravityY(600 * mode.gravityScale);
+    food.setVelocity(Phaser.Math.Between(-30, 30), Phaser.Math.Between(mode.minFallVelocity, mode.maxFallVelocity) * moonFallScale);
+    food.setGravityY(600 * mode.gravityScale * moonFallScale);
     food.setAngularVelocity(Phaser.Math.Between(-65, 65));
     food.setDepth(7);
     this.attachDropShadow(food, 34, 10, 0.15);
@@ -535,6 +558,7 @@ export class MainScene extends Phaser.Scene {
 
   launchAirplaneBigPizza() {
     const mode = this.getCurrentMode();
+    const moonFallScale = this.currentMapKey === 'moon' ? 1 / 3 : 1;
     this.airplaneActive = true;
     const fromLeft = Math.random() > 0.5;
     const startX = fromLeft ? -120 : WORLD_WIDTH + 120;
@@ -564,6 +588,8 @@ export class MainScene extends Phaser.Scene {
         return;
       }
       food.foodValue = 5;
+      food.baseFoodValue = 5;
+      food.sourceType = 'whole';
       food.caught = false;
       food.onGround = false;
       food.groundTimer = null;
@@ -577,8 +603,8 @@ export class MainScene extends Phaser.Scene {
       food.body.enable = true;
       food.body.setAllowGravity(true);
       food.setScale(mode.foodScale * 1.18);
-      food.setVelocity(Phaser.Math.Between(-20, 20), Phaser.Math.Between(mode.minFallVelocity - 10, mode.maxFallVelocity - 16));
-      food.setGravityY(600 * mode.gravityScale * 0.9);
+      food.setVelocity(Phaser.Math.Between(-20, 20), Phaser.Math.Between(mode.minFallVelocity - 10, mode.maxFallVelocity - 16) * moonFallScale);
+      food.setGravityY(600 * mode.gravityScale * 0.9 * moonFallScale);
       food.setAngularVelocity(Phaser.Math.Between(-55, 55));
       food.setDepth(7);
       this.attachDropShadow(food, 42, 12, 0.16);
@@ -639,7 +665,7 @@ export class MainScene extends Phaser.Scene {
     const mode = this.getCurrentMode();
     const isVampire = this.currentEnemyType === 'vampires';
     const fromLeft = Math.random() > 0.5;
-    const startX = fromLeft ? -24 : WORLD_WIDTH + 24;
+    const startX = fromLeft ? 10 : WORLD_WIDTH - 10;
     const speed = isVampire ? mode.zombieSpeed + 12 : mode.zombieSpeed;
     const velocityX = fromLeft ? speed : -speed;
     const textureKey = isVampire ? 'vampireWalker' : 'zombieWalker';
@@ -790,9 +816,11 @@ export class MainScene extends Phaser.Scene {
     }
     this.destroyDropShadow(fuel);
     fuel.disableBody(true, true);
-    this.jetpackFuel = this.jetpackFuelMax;
+    if (this.jetpackFuel < this.jetpackFuelMax) {
+      this.jetpackFuel = Math.min(this.jetpackFuelMax, this.jetpackFuel + 2.5);
+    }
     this.updateHud();
-    this.showCatchPopup(this.kitten.x, this.kitten.y - 34, 'FUEL +100%');
+    this.showCatchPopup(this.kitten.x, this.kitten.y - 34, 'FUEL +2.5s');
   }
 
   handleZombieEatFood(objA, objB) {
@@ -870,7 +898,8 @@ export class MainScene extends Phaser.Scene {
 
     this.foodCaught += 1;
     this.foodPoints += growthValue;
-    this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
+    const growthDelta = this.getGrowthDelta(food, growthValue);
+    this.sizeMultiplier = Math.max(1, this.sizeMultiplier + growthDelta);
 
     this.kitten.setScale(this.sizeMultiplier);
     this.syncKittenBodyToFeet();
@@ -881,7 +910,7 @@ export class MainScene extends Phaser.Scene {
     this.playEatingAnimation();
     this.updateHud();
 
-    const popupText = growthValue > 1 ? '+WHOLE PIZZA x5' : '+slice';
+    const popupText = growthValue > 1 ? '+1.0x SIZE' : '+0.1x SIZE';
     this.showCatchPopup(this.kitten.x, this.kitten.y - 45 * this.sizeMultiplier, popupText);
 
     if (growthValue <= 1) {
@@ -924,7 +953,7 @@ export class MainScene extends Phaser.Scene {
       this.playEatSound(2);
       this.foodPoints += 2;
       this.foodCaught += 1;
-      this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
+      this.sizeMultiplier = Math.max(1, this.sizeMultiplier + 0.2);
       this.kitten.setScale(this.sizeMultiplier);
       this.syncKittenBodyToFeet();
       this.eatCooldown = 160;
@@ -940,7 +969,7 @@ export class MainScene extends Phaser.Scene {
 
     this.zombieHitCooldown = 450;
     this.foodPoints = Math.max(0, this.foodPoints - 2);
-    this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
+    this.sizeMultiplier = Math.max(1, this.sizeMultiplier - 0.2);
     this.kitten.setScale(this.sizeMultiplier);
     this.syncKittenBodyToFeet();
     kitten.setVelocityX(kitten.x < zombie.x ? -220 : 220);
@@ -953,6 +982,14 @@ export class MainScene extends Phaser.Scene {
     this.syncEnemyBody(zombie);
 
     this.saveCharacterState();
+  }
+
+  getGrowthDelta(food, growthValue) {
+    const sourceType = food?.sourceType || (growthValue > 1 ? 'whole' : 'slice');
+    const baseValue = food?.baseFoodValue || (sourceType === 'whole' ? 5 : 1);
+    const baseDelta = sourceType === 'whole' ? 1 : 0.1;
+    const decayRatio = Phaser.Math.Clamp(growthValue / baseValue, 0.5, 1);
+    return baseDelta * decayRatio;
   }
 
   getSizeMultiplier(foodPoints) {
@@ -1151,6 +1188,10 @@ export class MainScene extends Phaser.Scene {
     return `${SAVE_PREFIX}${characterKey}`;
   }
 
+  getGrowthKey(characterKey) {
+    return `${GROWTH_SAVE_PREFIX}${characterKey}`;
+  }
+
   loadCharacterSave(characterKey) {
     try {
       const raw = localStorage.getItem(this.getSaveKey(characterKey));
@@ -1176,8 +1217,32 @@ export class MainScene extends Phaser.Scene {
 
     try {
       localStorage.setItem(this.getSaveKey(this.currentCharacterKey), JSON.stringify(payload));
+      this.saveGrowthState();
     } catch (_err) {
       // ignore quota/storage issues in prototype
+    }
+  }
+
+  loadGrowthState(characterKey) {
+    try {
+      const raw = localStorage.getItem(this.getGrowthKey(characterKey));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  saveGrowthState() {
+    const payload = {
+      character: this.currentCharacterKey,
+      foodPoints: this.foodPoints,
+      sizeMultiplier: this.sizeMultiplier,
+      updatedAt: Date.now(),
+    };
+    try {
+      localStorage.setItem(this.getGrowthKey(this.currentCharacterKey), JSON.stringify(payload));
+    } catch (_err) {
+      // ignore storage issues
     }
   }
 
