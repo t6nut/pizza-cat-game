@@ -44,8 +44,8 @@ export class GameOverScene extends Phaser.Scene {
 
     this.tweens.add({ targets: prompt, alpha: 0.08, duration: 650, yoyo: true, repeat: -1 });
 
-    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('MainScene'));
-    this.input.keyboard.once('keydown-ENTER', () => this.scene.start('MainScene'));
+    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('TitleScene'));
+    this.input.keyboard.once('keydown-ENTER', () => this.scene.start('TitleScene'));
   }
 
   _buildWinScreen() {

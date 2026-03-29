@@ -3,9 +3,31 @@ import { drawNightBackground, TEXT_STYLE } from '../utils.js';
 const W = 960;
 const H = 540;
 
+const CHARACTER_OPTIONS = {
+  orange: { label: 'Orange Cat' },
+  tuxedo: { label: 'Tuxedo Cat' },
+  pikatchu: { label: 'Pikatchu' },
+};
+
+const MODE_OPTIONS = {
+  easy: { label: 'Easy' },
+  medium: { label: 'Medium' },
+  hard: { label: 'Hard' },
+};
+
+const THEME_OPTIONS = {
+  day: { label: 'Day' },
+  night: { label: 'Night' },
+};
+
 export class TitleScene extends Phaser.Scene {
   constructor() {
     super('TitleScene');
+    this.selectedCharacter = null;
+    this.selectedMode = null;
+    this.selectedTheme = null;
+    this.selectedZombies = null;
+    this.optionButtons = {};
   }
 
   preload() {
@@ -13,8 +35,16 @@ export class TitleScene extends Phaser.Scene {
     this.load.svg('kittenIdle', 'assets/sprites/kitten_idle.svg', { scale: 1 });
     this.load.svg('kittenRun',  'assets/sprites/kitten_run.svg',  { scale: 1 });
     this.load.svg('kittenEat',  'assets/sprites/kitten_eat.svg',  { scale: 1 });
+    this.load.svg('tuxedoIdle', 'assets/sprites/tuxedo_idle.svg', { scale: 1 });
+    this.load.svg('tuxedoRun',  'assets/sprites/tuxedo_run.svg',  { scale: 1 });
+    this.load.svg('tuxedoEat',  'assets/sprites/tuxedo_eat.svg',  { scale: 1 });
+    this.load.svg('pikatchuIdle', 'assets/sprites/pikatchu_idle.svg', { scale: 1 });
+    this.load.svg('pikatchuRun',  'assets/sprites/pikatchu_run.svg',  { scale: 1 });
+    this.load.svg('pikatchuEat',  'assets/sprites/pikatchu_eat.svg',  { scale: 1 });
     this.load.svg('pizza',      'assets/sprites/pizza_slice.svg', { scale: 1 });
+    this.load.svg('pizzaWhole', 'assets/sprites/pizza_whole.svg', { scale: 1 });
     this.load.svg('chefHeli',   'assets/sprites/chef_helicopter.svg', { scale: 1 });
+    this.load.svg('pizzaPlane', 'assets/sprites/pizza_plane.svg', { scale: 1 });
   }
 
   create() {
@@ -35,7 +65,7 @@ export class TitleScene extends Phaser.Scene {
     // Title
     this.add.text(W / 2, H / 2 - 118, 'PIZZA CAT', {
       ...TEXT_STYLE,
-      fontSize: '82px',
+      fontSize: '66px',
       color: '#ffd700',
       strokeThickness: 10,
     }).setOrigin(0.5).setDepth(20);
@@ -55,23 +85,21 @@ export class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(20);
 
-    this.add.text(W / 2, H / 2 + 18, '← → or A / D  to move', {
+    this.add.text(W / 2, H / 2 + 18, '← → or A / D move, ↑ or W jump', {
       ...TEXT_STYLE,
       fontSize: '16px',
       color: '#88aadd',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(20);
 
-    // Blinking start prompt
-    const prompt = this.add.text(W / 2, H / 2 + 74,
-      '— PRESS  SPACE  OR  ENTER  TO  START —', {
+    this.add.text(W / 2, H / 2 + 54, 'Select all options to unlock Start', {
       ...TEXT_STYLE,
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#ffffff',
-      strokeThickness: 5,
+      strokeThickness: 4,
     }).setOrigin(0.5).setDepth(20);
 
-    this.tweens.add({ targets: prompt, alpha: 0.08, duration: 650, yoyo: true, repeat: -1 });
+    this.createOptionsPanel();
 
     // Kitten bouncing at bottom
     const kitten = this.add.sprite(W / 2, H - 44, 'kittenIdle');
@@ -88,9 +116,132 @@ export class TitleScene extends Phaser.Scene {
     // Decorative pizzas drop every 1 s
     this.time.addEvent({ delay: 1000, loop: true, callback: this._dropPizza, callbackScope: this });
 
-    // Input
-    this.input.keyboard.once('keydown-SPACE', this._start, this);
-    this.input.keyboard.once('keydown-ENTER', this._start, this);
+  }
+
+  createOptionsPanel() {
+    const panelY = H - 138;
+    const panel = this.add.rectangle(W / 2, panelY, 860, 220, 0x0a142d, 0.9);
+    panel.setStrokeStyle(3, 0x9bc4ff, 0.6);
+    panel.setDepth(16);
+
+    this.add.text(W / 2, panelY - 92, '1) Character', {
+      ...TEXT_STYLE,
+      fontSize: '18px',
+      color: '#cde1ff',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(17);
+
+    this.add.text(W / 2, panelY - 36, '2) Mode', {
+      ...TEXT_STYLE,
+      fontSize: '18px',
+      color: '#cde1ff',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(17);
+
+    this.add.text(W / 2, panelY + 20, '3) Theme   4) Zombies', {
+      ...TEXT_STYLE,
+      fontSize: '18px',
+      color: '#cde1ff',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(17);
+
+    this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 64, (value) => {
+      this.selectedCharacter = value;
+    });
+
+    this.createOptionRow('mode', ['easy', 'medium', 'hard'], MODE_OPTIONS, panelY - 8, (value) => {
+      this.selectedMode = value;
+    });
+
+    this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 48, (value) => {
+      this.selectedTheme = value;
+    }, W / 2 - 150);
+
+    this.createOptionRow('zombies', ['on', 'off'], { on: { label: 'On' }, off: { label: 'Off' } }, panelY + 48, (value) => {
+      this.selectedZombies = value;
+    }, W / 2 + 150);
+
+    this.startButton = this.add.rectangle(W / 2, panelY + 92, 280, 44, 0x4d596b, 1)
+      .setDepth(17)
+      .setStrokeStyle(3, 0x9bc4ff, 0.5);
+    this.startText = this.add.text(W / 2, panelY + 92, 'Select All Options', {
+      ...TEXT_STYLE,
+      fontSize: '20px',
+      color: '#c6d0dd',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(18);
+
+    this.startButton.setInteractive({ useHandCursor: true });
+    this.startButton.on('pointerdown', () => {
+      if (this.canStart()) {
+        this._start();
+      }
+    });
+    this.updateStartButtonState();
+  }
+
+  createOptionRow(groupName, keys, sourceMap, y, onSelect, centerX = W / 2) {
+    this.optionButtons[groupName] = [];
+    const spacing = keys.length === 2 ? 130 : 170;
+    const width = keys.length === 2 ? 120 : 150;
+    const startX = centerX - ((keys.length - 1) * spacing) / 2;
+
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      const label = sourceMap[key].label;
+      const box = this.add.rectangle(startX + i * spacing, y, width, 34, 0x283c5c, 1)
+        .setDepth(17)
+        .setStrokeStyle(2, 0x89b8ff, 0.7);
+      box.selected = false;
+
+      const text = this.add.text(startX + i * spacing, y, label, {
+        ...TEXT_STYLE,
+        fontSize: '16px',
+        color: '#e2f0ff',
+        strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(18);
+
+      box.setInteractive({ useHandCursor: true });
+      box.on('pointerover', () => {
+        if (!box.selected) {
+          box.setFillStyle(0x33517a);
+        }
+      });
+      box.on('pointerout', () => {
+        if (!box.selected) {
+          box.setFillStyle(0x283c5c);
+        }
+      });
+      box.on('pointerdown', () => {
+        const row = this.optionButtons[groupName];
+        for (let j = 0; j < row.length; j += 1) {
+          row[j].box.selected = false;
+          row[j].box.setFillStyle(0x283c5c);
+        }
+        box.selected = true;
+        box.setFillStyle(0x3b8a5f);
+        onSelect(key);
+        this.updateStartButtonState();
+      });
+
+      this.optionButtons[groupName].push({ key, box, text });
+    }
+  }
+
+  canStart() {
+    return !!(this.selectedCharacter && this.selectedMode && this.selectedTheme && this.selectedZombies);
+  }
+
+  updateStartButtonState() {
+    if (this.canStart()) {
+      this.startButton.setFillStyle(0xff9a3d);
+      this.startText.setText('Start Game');
+      this.startText.setColor('#111111');
+    } else {
+      this.startButton.setFillStyle(0x4d596b);
+      this.startText.setText('Select All Options');
+      this.startText.setColor('#c6d0dd');
+    }
   }
 
   _startHeliHover() {
@@ -136,6 +287,11 @@ export class TitleScene extends Phaser.Scene {
   }
 
   _start() {
-    this.scene.start('MainScene');
+    this.scene.start('MainScene', {
+      character: this.selectedCharacter,
+      mode: this.selectedMode,
+      theme: this.selectedTheme,
+      zombies: this.selectedZombies === 'on',
+    });
   }
 }

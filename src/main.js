@@ -1,11 +1,13 @@
-import { MainScene } from "./scenes/MainScene.js";
+import { TitleScene }    from "./scenes/TitleScene.js";
+import { MainScene }     from "./scenes/MainScene.js";
+import { GameOverScene } from "./scenes/GameOverScene.js";
 
 const config = {
   type: Phaser.AUTO,
   parent: "game",
   width: 960,
   height: 540,
-  backgroundColor: "#98e3ff",
+  backgroundColor: "#060b1e",
   pixelArt: true,
   roundPixels: true,
   physics: {
@@ -15,7 +17,7 @@ const config = {
       debug: false,
     },
   },
-  scene: [MainScene],
+  scene: [TitleScene, MainScene, GameOverScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

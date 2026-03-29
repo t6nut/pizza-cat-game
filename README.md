@@ -10,14 +10,20 @@ A tiny endless 2D pixel-art Phaser game prototype.
 
 ## Play
 
-- Choose your cat at start: Orange Cat, Tuxedo Cat, or Pikatchu
-- Choose a mode at start:
-   - Easy: biggest and slowest falling slices/pizzas
-   - Medium: medium size and speed
-   - Hard: faster pace with slightly larger food than original baseline
+- You must select all options before Start unlocks on the title screen:
+   - Character: Orange Cat, Tuxedo Cat, or Pikatchu
+   - Mode: Easy, Medium, Hard
+   - Theme: Day or Night
+   - Zombies: On or Off
+- Easy mode is tuned to be easier:
+   - Slices and pizzas fall slower
+   - Airplane fly-by is slower
+   - Growth ramps faster
 - Move kitten with `A/D` or `Left/Right`
+- Jump with `Up Arrow` or `W` (required when zombies are enabled)
 - Catch falling pizza slices to grow
 - 5-10% of drops are full pizzas from a fly-by airplane
 - Full pizzas grant 5x growth compared to slices
-- Press `R` any time to restart and pick a new setup
-- Endless mode: no game over
+- Night theme adds stars, moon, moonshine, and a cat flashlight glow
+- Zombies mode spawns walkers you can jump over or stomp on their head
+- Press `R` in-game to return to the title options screen
