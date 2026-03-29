@@ -1,3 +1,5 @@
+import { drawNightBackground } from '../utils.js';
+
 const WORLD_WIDTH = 1280;
 const WORLD_HEIGHT = 720;
 const SAVE_PREFIX = 'cat_game_save_';
@@ -77,6 +79,8 @@ const ENEMY_SETTINGS = {
   off: { label: 'Off' },
 };
 
+const CHARACTER_HITBOX = { width: 16, height: 12, offsetX: 8, offsetY: 14 };
+
 export class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -118,6 +122,10 @@ export class MainScene extends Phaser.Scene {
     this.jumpVelocity = -230;
     this.kittenExtraGravity = 300;
     this.moonWrapEnabled = false;
+    this.slicesEatenForBonus = 0;
+    this.pendingBonusFlyovers = 0;
+    this.musicEvent = null;
+    this.musicStep = 0;
   }
 
   init(data) {
@@ -205,8 +213,10 @@ export class MainScene extends Phaser.Scene {
 
     this.input.keyboard.on('keydown', this.resumeAudio, this);
     this.input.on('pointerdown', this.resumeAudio, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopBackgroundMusic());
 
     this.createHud();
+    this.startBackgroundMusic();
     this.createFlashlight();
     this.ensureZombieTexture();
     this.ensureVampireTexture();
@@ -222,8 +232,8 @@ export class MainScene extends Phaser.Scene {
 
     if (this.loadedState) {
       this.kitten.setScale(this.sizeMultiplier);
-      this.kitten.body.setSize(16 * this.sizeMultiplier, 12 * this.sizeMultiplier, true);
     }
+    this.syncKittenBodyToFeet();
 
     this.schedulePizzaDrops();
     if (this.zombiesEnabled) {
@@ -247,6 +257,8 @@ export class MainScene extends Phaser.Scene {
   applyMap(mapKey) {
     const map = MAP_SETTINGS[mapKey] || MAP_SETTINGS.city;
     this.currentMapKey = mapKey;
+    this.bgSky.setVisible(true);
+    this.bgGround.setVisible(true);
     this.bgSky.setFillStyle(map.skyColor, 1);
     this.bgGround.setFillStyle(map.groundColor, 1);
 
@@ -256,13 +268,39 @@ export class MainScene extends Phaser.Scene {
     this.backgroundElements = [];
 
     if (mapKey === 'city') {
-      for (let i = 0; i < 12; i += 1) {
-        const w = Phaser.Math.Between(60, 120);
-        const h = Phaser.Math.Between(70, 180);
-        const x = 50 + i * 110;
-        const y = WORLD_HEIGHT - 120 - h / 2;
-        const b = this.add.rectangle(x, y, w, h, 0x2e3c52, 0.55).setDepth(2);
-        this.backgroundElements.push(b);
+      // Reuse the title-screen city visual language for city map.
+      this.bgSky.setVisible(false);
+      this.bgGround.setVisible(false);
+      const cityBackdrop = drawNightBackground(this, WORLD_WIDTH, WORLD_HEIGHT);
+      if (cityBackdrop?.setDepth) {
+        cityBackdrop.setDepth(0);
+      }
+      if (cityBackdrop) {
+        this.backgroundElements.push(cityBackdrop);
+      }
+
+      // Add simple looping road traffic behind gameplay sprites.
+      for (let i = 0; i < 4; i += 1) {
+        const y = WORLD_HEIGHT - 150 + i * 10;
+        const speed = 3800 + i * 700;
+        const color = [0xe04444, 0x44a6e0, 0xf0c547, 0xa35de6][i % 4];
+        const fromLeft = i % 2 === 0;
+        const body = this.add.rectangle(fromLeft ? -80 : WORLD_WIDTH + 80, y, 48, 16, color, 0.9).setDepth(2);
+        const wheelA = this.add.circle(body.x - 14, y + 8, 3, 0x1f1f1f, 1).setDepth(2);
+        const wheelB = this.add.circle(body.x + 14, y + 8, 3, 0x1f1f1f, 1).setDepth(2);
+        this.backgroundElements.push(body, wheelA, wheelB);
+
+        this.tweens.add({
+          targets: body,
+          x: fromLeft ? WORLD_WIDTH + 90 : -90,
+          duration: speed,
+          repeat: -1,
+          ease: 'Linear',
+          onUpdate: () => {
+            wheelA.x = body.x - 14;
+            wheelB.x = body.x + 14;
+          },
+        });
       }
     } else if (mapKey === 'desert') {
       const dune1 = this.add.ellipse(230, WORLD_HEIGHT - 80, 420, 110, 0xe7bf7e, 0.55).setDepth(2);
@@ -270,11 +308,14 @@ export class MainScene extends Phaser.Scene {
       const sun = this.add.circle(830, 86, 34, 0xfff1a0, 0.9).setDepth(2);
       this.backgroundElements.push(dune1, dune2, sun);
     } else if (mapKey === 'beach') {
-      const sea = this.add.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT - 130, WORLD_WIDTH, 86, 0x4fc4dc, 0.58).setDepth(2);
-      const wave1 = this.add.ellipse(260, WORLD_HEIGHT - 142, 340, 28, 0xbef6ff, 0.5).setDepth(2);
-      const wave2 = this.add.ellipse(700, WORLD_HEIGHT - 122, 420, 30, 0xbef6ff, 0.45).setDepth(2);
-      this.backgroundElements.push(sea, wave1, wave2);
+      const sea = this.add.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT * 0.58, WORLD_WIDTH, WORLD_HEIGHT * 0.64, 0x4fc4dc, 0.6).setDepth(2);
+      const wave1 = this.add.ellipse(260, WORLD_HEIGHT * 0.41, 420, 34, 0xbef6ff, 0.45).setDepth(2);
+      const wave2 = this.add.ellipse(700, WORLD_HEIGHT * 0.44, 520, 38, 0xbef6ff, 0.4).setDepth(2);
+      const wave3 = this.add.ellipse(1080, WORLD_HEIGHT * 0.47, 360, 30, 0xbef6ff, 0.36).setDepth(2);
+      this.backgroundElements.push(sea, wave1, wave2, wave3);
     } else if (mapKey === 'moon') {
+      this.bgSky.setVisible(true);
+      this.bgGround.setVisible(true);
       this.bgGround.setAlpha(0.35);
       const moonSurface = this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT + 150, 1400, 560, 0x8f97ab, 0.8).setDepth(2);
       const ringA = this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT + 160, 1250, 500, 0xc7cdd8, 0.08).setDepth(3);
@@ -321,6 +362,9 @@ export class MainScene extends Phaser.Scene {
       const moonshine = this.add.ellipse(810, 350, 420, 230, 0x9dbbff, 0.12).setDepth(2);
       this.backgroundElements.push(moonGlow, moon, moonshine);
       this.bgSky.setFillStyle(theme.skyColor, 0.92);
+      if (this.currentMapKey === 'beach') {
+        this.bgGround.setFillStyle(0x7b6b4d, 1);
+      }
     } else if (this.currentMapKey !== 'moon') {
       for (let i = 0; i < 11; i += 1) {
         const cloudX = 70 + i * 115;
@@ -472,6 +516,10 @@ export class MainScene extends Phaser.Scene {
     food.caught = false;
     food.onGround = false;
     food.groundTimer = null;
+    food.groundStartValue = null;
+    food.groundLandedAt = 0;
+    food.fadeTween = null;
+    food.alpha = 1;
     food.setTexture('pizza');
     food.setActive(true);
     food.setVisible(true);
@@ -519,6 +567,10 @@ export class MainScene extends Phaser.Scene {
       food.caught = false;
       food.onGround = false;
       food.groundTimer = null;
+      food.groundStartValue = null;
+      food.groundLandedAt = 0;
+      food.fadeTween = null;
+      food.alpha = 1;
       food.setTexture('pizzaWhole');
       food.setActive(true);
       food.setVisible(true);
@@ -591,7 +643,7 @@ export class MainScene extends Phaser.Scene {
     const speed = isVampire ? mode.zombieSpeed + 12 : mode.zombieSpeed;
     const velocityX = fromLeft ? speed : -speed;
     const textureKey = isVampire ? 'vampireWalker' : 'zombieWalker';
-    const zombie = this.zombieGroup.get(startX, WORLD_HEIGHT - 66, textureKey);
+    const zombie = this.zombieGroup.get(startX, this.getGroundSurfaceY() - 14, textureKey);
     if (!zombie) {
       return;
     }
@@ -615,6 +667,7 @@ export class MainScene extends Phaser.Scene {
     zombie.litStopped = false;
     zombie.enemyType = isVampire ? 'vampire' : 'zombie';
     zombie.vampireLightMs = 0;
+    this.syncEnemyBody(zombie);
   }
 
   handleFoodHitGround(objA, objB) {
@@ -631,7 +684,19 @@ export class MainScene extends Phaser.Scene {
     }
 
     food.onGround = true;
-    food.foodValue = Math.max(0.5, (food.foodValue || 1) * 0.5);
+    food.groundStartValue = food.foodValue || 1;
+    food.groundLandedAt = this.time.now;
+    food.alpha = 1;
+    if (food.fadeTween) {
+      food.fadeTween.stop();
+      food.fadeTween = null;
+    }
+    food.fadeTween = this.tweens.add({
+      targets: food,
+      alpha: 0.12,
+      duration: 3000,
+      ease: 'Linear',
+    });
     food.setAngularVelocity(0);
     // Some collision paths can yield a body without setVelocityX; damp X directly.
     if (food.body && food.body.velocity) {
@@ -645,6 +710,17 @@ export class MainScene extends Phaser.Scene {
         food.disableBody(true, true);
       }
     });
+  }
+
+  getGroundAdjustedFoodValue(food) {
+    if (!food || !food.onGround || !food.groundLandedAt) {
+      return food?.foodValue || 1;
+    }
+
+    const startValue = food.groundStartValue || food.foodValue || 1;
+    const elapsed = Phaser.Math.Clamp(this.time.now - food.groundLandedAt, 0, 3000);
+    const t = elapsed / 3000;
+    return Phaser.Math.Linear(startValue, startValue * 0.5, t);
   }
 
   handleBatteryHitGround(objA, objB) {
@@ -737,12 +813,15 @@ export class MainScene extends Phaser.Scene {
       food.groundTimer = null;
     }
 
-    const value = food.foodValue || 1;
+    const value = this.getGroundAdjustedFoodValue(food);
     this.destroyDropShadow(food);
     food.disableBody(true, true);
+    this.playEnemyEatSound(value);
 
     zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.08 * value, 1, 2.6);
     zombie.setScale(zombie.growthScale);
+    zombie.moveSpeed = Phaser.Math.Clamp((zombie.moveSpeed || 0) * 1.3, 40, 320);
+    this.syncEnemyBody(zombie);
     if (!zombie.litStopped) {
       zombie.setVelocityX(zombie.moveDir * zombie.moveSpeed);
     }
@@ -755,6 +834,7 @@ export class MainScene extends Phaser.Scene {
 
     food.caught = true;
     food.body.enable = false;
+    food.foodValue = this.getGroundAdjustedFoodValue(food);
     food.setVelocity(0, 0);
     food.setAngularVelocity(0);
     food.setDepth(12);
@@ -782,6 +862,10 @@ export class MainScene extends Phaser.Scene {
       food.groundTimer = null;
     }
     this.destroyDropShadow(food);
+    if (food.fadeTween) {
+      food.fadeTween.stop();
+      food.fadeTween = null;
+    }
     food.disableBody(true, true);
 
     this.foodCaught += 1;
@@ -789,7 +873,7 @@ export class MainScene extends Phaser.Scene {
     this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
 
     this.kitten.setScale(this.sizeMultiplier);
-    this.kitten.body.setSize(16 * this.sizeMultiplier, 12 * this.sizeMultiplier, true);
+    this.syncKittenBodyToFeet();
     this.eatCooldown = 160;
     this.kitten.setTexture(this.kittenSkin.eat);
 
@@ -799,6 +883,18 @@ export class MainScene extends Phaser.Scene {
 
     const popupText = growthValue > 1 ? '+WHOLE PIZZA x5' : '+slice';
     this.showCatchPopup(this.kitten.x, this.kitten.y - 45 * this.sizeMultiplier, popupText);
+
+    if (growthValue <= 1) {
+      this.slicesEatenForBonus += 1;
+      if (this.slicesEatenForBonus % 5 === 0) {
+        this.pendingBonusFlyovers += 1;
+        if (!this.airplaneActive) {
+          this.pendingBonusFlyovers -= 1;
+          this.launchAirplaneBigPizza();
+          this.showCatchPopup(this.kitten.x, this.kitten.y - 64 * this.sizeMultiplier, 'BONUS FLYOVER!');
+        }
+      }
+    }
 
     if (this.foodCaught % 2 === 0) {
       this.schedulePizzaDrops();
@@ -822,7 +918,7 @@ export class MainScene extends Phaser.Scene {
         zombie.shadow = null;
       }
       zombie.disableBody(true, true);
-      kitten.setVelocityY(-340);
+      kitten.setVelocityY(-220);
       this.showCatchPopup(kitten.x, kitten.y - 38, 'CHOMP!');
       this.playZombieStompSound();
       this.playEatSound(2);
@@ -830,7 +926,7 @@ export class MainScene extends Phaser.Scene {
       this.foodCaught += 1;
       this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
       this.kitten.setScale(this.sizeMultiplier);
-      this.kitten.body.setSize(16 * this.sizeMultiplier, 12 * this.sizeMultiplier, true);
+      this.syncKittenBodyToFeet();
       this.eatCooldown = 160;
       this.kitten.setTexture(this.kittenSkin.eat);
       this.updateHud();
@@ -846,6 +942,7 @@ export class MainScene extends Phaser.Scene {
     this.foodPoints = Math.max(0, this.foodPoints - 2);
     this.sizeMultiplier = this.getSizeMultiplier(this.foodPoints);
     this.kitten.setScale(this.sizeMultiplier);
+    this.syncKittenBodyToFeet();
     kitten.setVelocityX(kitten.x < zombie.x ? -220 : 220);
     this.updateHud();
     this.showCatchPopup(kitten.x, kitten.y - 45, 'OUCH!');
@@ -853,14 +950,15 @@ export class MainScene extends Phaser.Scene {
     // Zombie grows a little from hitting the cat.
     zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.12, 1, 2.6);
     zombie.setScale(zombie.growthScale);
+    this.syncEnemyBody(zombie);
 
     this.saveCharacterState();
   }
 
   getSizeMultiplier(foodPoints) {
     const mode = this.getCurrentMode();
-    const multiplier = 1 + 0.18 * Math.sqrt(foodPoints * mode.growthMultiplier);
-    return Phaser.Math.Clamp(multiplier, 1, 3.5);
+    const multiplier = 1 + 0.36 * Math.sqrt(foodPoints * mode.growthMultiplier);
+    return Math.max(1, multiplier);
   }
 
   showCatchPopup(x, y, text) {
@@ -884,6 +982,79 @@ export class MainScene extends Phaser.Scene {
       duration: 90,
       ease: 'Sine.easeInOut',
     });
+  }
+
+  playEnemyEatSound(strength) {
+    if (!this.audioCtx) {
+      return;
+    }
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    const now = this.audioCtx.currentTime;
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(170 + strength * 8, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.11);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.055, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
+
+  startBackgroundMusic() {
+    if (this.musicEvent) {
+      this.musicEvent.remove(false);
+      this.musicEvent = null;
+    }
+
+    this.musicStep = 0;
+    this.musicEvent = this.time.addEvent({
+      delay: 280,
+      loop: true,
+      callback: () => this.playMusicStep(),
+    });
+  }
+
+  stopBackgroundMusic() {
+    if (this.musicEvent) {
+      this.musicEvent.remove(false);
+      this.musicEvent = null;
+    }
+  }
+
+  playMusicStep() {
+    if (!this.audioCtx) {
+      return;
+    }
+
+    const sequence = [0, 4, 7, 4, 9, 7, 4, 2];
+    const semitone = sequence[this.musicStep % sequence.length];
+    this.musicStep += 1;
+
+    const now = this.audioCtx.currentTime;
+    const freq = 196 * (2 ** (semitone / 12));
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.022, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+    osc.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  }
+
+  toggleFullscreen() {
+    const doc = window.document;
+    if (doc.fullscreenElement) {
+      doc.exitFullscreen();
+    } else {
+      doc.documentElement.requestFullscreen();
+    }
   }
 
   resumeAudio() {
@@ -1103,6 +1274,34 @@ export class MainScene extends Phaser.Scene {
     this.helmetGraphics = this.add.graphics().setDepth(9);
   }
 
+  syncKittenBodyToFeet() {
+    if (!this.kitten || !this.kitten.body) {
+      return;
+    }
+
+    const body = this.kitten.body;
+    body.setSize(CHARACTER_HITBOX.width, CHARACTER_HITBOX.height, false);
+    body.setOffset(CHARACTER_HITBOX.offsetX, CHARACTER_HITBOX.offsetY);
+
+    const groundTop = this.getGroundSurfaceY();
+    const nearGround = body.bottom >= groundTop - 24 && body.velocity.y >= -20;
+    if (nearGround) {
+      body.y = groundTop - body.height;
+    }
+  }
+
+  syncEnemyBody(enemy) {
+    if (!enemy || !enemy.body) {
+      return;
+    }
+    enemy.body.setSize(CHARACTER_HITBOX.width, CHARACTER_HITBOX.height, false);
+    enemy.body.setOffset(CHARACTER_HITBOX.offsetX, CHARACTER_HITBOX.offsetY);
+    const groundTop = this.getGroundSurfaceY();
+    if (enemy.body.bottom >= groundTop - 24) {
+      enemy.body.y = groundTop - enemy.body.height;
+    }
+  }
+
   updateAstronautHelmet() {
     if (!this.helmetGraphics || !this.kitten) {
       return;
@@ -1113,7 +1312,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     const x = this.kitten.x;
-    const y = this.kitten.y - 22 * this.sizeMultiplier;
+    const y = this.kitten.y - 14 * this.sizeMultiplier;
     const rX = 12 * this.sizeMultiplier;
     const rY = 10 * this.sizeMultiplier;
 
@@ -1236,11 +1435,7 @@ export class MainScene extends Phaser.Scene {
 
     // Snapshot velocity before physics step so the stomp callback has reliable data.
     if (Phaser.Input.Keyboard.JustDown(this.fullscreenKey)) {
-      if (this.scale.isFullscreen) {
-        this.scale.stopFullscreen();
-      } else {
-        this.scale.startFullscreen();
-      }
+      this.toggleFullscreen();
     }
 
     // Snapshot velocity before physics step so the stomp callback has reliable data.
@@ -1261,6 +1456,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.updateChefHeli();
+    if (this.pendingBonusFlyovers > 0 && !this.airplaneActive) {
+      this.pendingBonusFlyovers -= 1;
+      this.launchAirplaneBigPizza();
+      this.showCatchPopup(this.kitten.x, this.kitten.y - 64 * this.sizeMultiplier, 'BONUS FLYOVER!');
+    }
     this.updateKittenMovement(delta);
     if (this.moonWrapEnabled) {
       if (this.kitten.x < -8) {
@@ -1392,6 +1592,14 @@ export class MainScene extends Phaser.Scene {
       this.eatCooldown -= delta;
       if (this.eatCooldown <= 0) {
         this.kitten.setTexture(this.kittenSkin.idle);
+      }
+    }
+
+    if (this.kitten.body.blocked.down || this.kitten.body.touching.down) {
+      const body = this.kitten.body;
+      const groundTop = this.getGroundSurfaceY();
+      if (Math.abs(body.bottom - groundTop) > 1) {
+        body.y = groundTop - body.height;
       }
     }
   }

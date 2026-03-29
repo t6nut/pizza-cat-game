@@ -78,6 +78,8 @@ export function drawNightBackground(scene, W, H) {
     g.fillRect(gx + 8,  Math.floor(H * 0.75) - 8, 4, 8);
     g.fillRect(gx + 14, Math.floor(H * 0.75) - 4, 4, 4);
   }
+
+  return g;
 }
 
 /** Pixel-font-style text config used across scenes. */

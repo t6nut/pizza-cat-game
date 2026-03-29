@@ -128,9 +128,9 @@ export class TitleScene extends Phaser.Scene {
 
     this.input.keyboard.on('keydown-F', () => this._toggleFullscreen());
 
-    // Character preview (left side, between title and panel)
-    const prevX = 75;
-    const prevY = 318;
+    // Character preview (centered above options panel)
+    const prevX = W / 2;
+    const prevY = 304;
     this.add.rectangle(prevX, prevY + 12, 118, 160, 0x0a142d, 0.82)
       .setDepth(16).setStrokeStyle(2, 0x9bc4ff, 0.45);
     this.add.text(prevX, prevY - 72, 'Your cat', {
@@ -165,10 +165,11 @@ export class TitleScene extends Phaser.Scene {
   }
 
   _toggleFullscreen() {
-    if (this.scale.isFullscreen) {
-      this.scale.stopFullscreen();
+    const doc = window.document;
+    if (doc.fullscreenElement) {
+      doc.exitFullscreen();
     } else {
-      this.scale.startFullscreen();
+      doc.documentElement.requestFullscreen();
     }
   }
 
