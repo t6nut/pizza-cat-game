@@ -90,6 +90,11 @@ export class MainScene extends Phaser.Scene {
     this.flashlightDir = 1;
     this.flashlightLength = 0;
     this.flashlightHalfWidth = 0;
+    this.flashlightBatteryMax = 100;
+    this.flashlightBattery = 100;
+    this.flashlightDrainPerSec = this.flashlightBatteryMax / 60;
+    this.flashlightOn = true;
+    this.facingDir = 1;
   }
 
   init(data) {
@@ -137,16 +142,20 @@ export class MainScene extends Phaser.Scene {
 
     this.pizzaGroup = this.physics.add.group({ bounceY: 0, collideWorldBounds: false, maxSize: 180 });
     this.zombieGroup = this.physics.add.group({ collideWorldBounds: false, maxSize: 40 });
+    this.batteryGroup = this.physics.add.group({ bounceY: 0.12, collideWorldBounds: false, maxSize: 20 });
 
     this.physics.add.overlap(this.kitten, this.pizzaGroup, this.handlePizzaCaught, null, this);
     this.physics.add.collider(this.pizzaGroup, this.ground, this.handleFoodHitGround, null, this);
     this.physics.add.collider(this.zombieGroup, this.ground);
+    this.physics.add.collider(this.batteryGroup, this.ground, this.handleBatteryHitGround, null, this);
     this.physics.add.collider(this.kitten, this.zombieGroup, this.handleZombieCollision, null, this);
     this.physics.add.overlap(this.zombieGroup, this.pizzaGroup, this.handleZombieEatFood, null, this);
+    this.physics.add.overlap(this.kitten, this.batteryGroup, this.handleBatteryPickup, null, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
     this.restartKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.flashToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
     this.input.keyboard.on('keydown', this.resumeAudio, this);
     this.input.on('pointerdown', this.resumeAudio, this);
@@ -154,6 +163,7 @@ export class MainScene extends Phaser.Scene {
     this.createHud();
     this.createFlashlight();
     this.ensureZombieTexture();
+    this.ensureBatteryTexture();
     this.applyTheme(this.currentThemeKey);
 
     if (this.loadedState) {
@@ -250,6 +260,9 @@ export class MainScene extends Phaser.Scene {
     this.scoreText = this.add.text(20, 20, 'Food: 0', style).setDepth(20);
     this.sizeText = this.add.text(20, 48, 'Size: 1.00x', style).setDepth(20);
     this.modeText = this.add.text(20, 76, 'Mode: --', style).setDepth(20);
+    this.batteryLabelText = this.add.text(20, 104, 'Battery', style).setDepth(20);
+    this.batteryBarFrame = this.add.graphics().setDepth(20);
+    this.batteryBarFill = this.add.graphics().setDepth(20);
 
     this.add
       .text(WORLD_WIDTH - 20, 20, 'R: Back to Options', {
@@ -272,6 +285,22 @@ export class MainScene extends Phaser.Scene {
     this.scoreText.setText(`Food: ${this.foodPoints}`);
     this.sizeText.setText(`Size: ${this.sizeMultiplier.toFixed(2)}x`);
     this.modeText.setText(`Mode: ${mode.label} | Theme: ${theme.label} | Zombies: ${zombieText}`);
+
+    const barX = 108;
+    const barY = 110;
+    const barW = 64;
+    const barH = 18;
+    const fillPct = Phaser.Math.Clamp(this.flashlightBattery / this.flashlightBatteryMax, 0, 1);
+
+    this.batteryBarFrame.clear();
+    this.batteryBarFrame.lineStyle(2, 0x13331e, 1);
+    this.batteryBarFrame.strokeRoundedRect(barX, barY, barW, barH, 3);
+    this.batteryBarFrame.fillStyle(0x13331e, 1);
+    this.batteryBarFrame.fillRect(barX + barW, barY + 5, 4, 8);
+
+    this.batteryBarFill.clear();
+    this.batteryBarFill.fillStyle(0x54d66a, 1);
+    this.batteryBarFill.fillRoundedRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * fillPct), barH - 4, 2);
   }
 
   getCurrentMode() {
@@ -385,7 +414,29 @@ export class MainScene extends Phaser.Scene {
       food.setGravityY(600 * mode.gravityScale * 0.9);
       food.setAngularVelocity(Phaser.Math.Between(-55, 55));
       food.setDepth(7);
+
+      const batteryDropX = this.pizzaPlane.x + (fromLeft ? -85 : 85);
+      this.spawnBatteryDrop(batteryDropX, this.pizzaPlane.y - 22, fromLeft ? -1 : 1);
     });
+  }
+
+  spawnBatteryDrop(x, y, driftDir) {
+    const battery = this.batteryGroup.get(x, y, 'batteryDrop');
+    if (!battery) {
+      return;
+    }
+    battery.setTexture('batteryDrop');
+    battery.setActive(true);
+    battery.setVisible(true);
+    battery.body.enable = true;
+    battery.body.setAllowGravity(true);
+    battery.setScale(1);
+    battery.setVelocity(Phaser.Math.Between(4, 10) * driftDir, Phaser.Math.Between(8, 15));
+    battery.setGravityY(34);
+    battery.setDragX(45);
+    battery.setDepth(8);
+    battery.onGround = false;
+    battery.groundTimer = null;
   }
 
   spawnZombie() {
@@ -442,6 +493,40 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  handleBatteryHitGround(objA, objB) {
+    const battery = this.batteryGroup && this.batteryGroup.contains(objA) ? objA : objB;
+    if (!battery || !this.batteryGroup.contains(battery) || !battery.active || battery.onGround) {
+      return;
+    }
+
+    battery.onGround = true;
+    battery.setAngularVelocity(0);
+    if (battery.body && battery.body.velocity) {
+      battery.body.velocity.x *= 0.25;
+      battery.body.velocity.y = 0;
+    }
+
+    battery.groundTimer = this.time.delayedCall(6000, () => {
+      if (battery.active) {
+        battery.disableBody(true, true);
+      }
+    });
+  }
+
+  handleBatteryPickup(_kitten, battery) {
+    if (!battery.active) {
+      return;
+    }
+    if (battery.groundTimer) {
+      battery.groundTimer.remove(false);
+      battery.groundTimer = null;
+    }
+    battery.disableBody(true, true);
+    this.flashlightBattery = this.flashlightBatteryMax;
+    this.updateHud();
+    this.showCatchPopup(this.kitten.x, this.kitten.y - 34, 'BATTERY +100%');
+  }
+
   handleZombieEatFood(objA, objB) {
     const zombie = this.zombieGroup && this.zombieGroup.contains(objA) ? objA : objB;
     const food = this.pizzaGroup && this.pizzaGroup.contains(objA) ? objA : objB;
@@ -483,7 +568,7 @@ export class MainScene extends Phaser.Scene {
 
     this.playCatchSound(food.foodValue || 1);
 
-    const mouthX = kitten.x + (kitten.flipX ? -16 : 16) * this.sizeMultiplier;
+    const mouthX = kitten.x + this.facingDir * 16 * this.sizeMultiplier;
     const mouthY = kitten.y - 16 * this.sizeMultiplier;
 
     this.tweens.add({
@@ -774,6 +859,36 @@ export class MainScene extends Phaser.Scene {
     g.destroy();
   }
 
+  ensureBatteryTexture() {
+    if (this.textures.exists('batteryDrop')) {
+      return;
+    }
+
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    // Parachute canopy
+    g.fillStyle(0xf3f3f3, 1);
+    g.fillRect(2, 0, 20, 4);
+    g.fillStyle(0xd6d6d6, 1);
+    g.fillRect(2, 4, 20, 2);
+    // Strings
+    g.lineStyle(1, 0xe8e8e8, 1);
+    g.beginPath();
+    g.moveTo(4, 6);
+    g.lineTo(9, 12);
+    g.moveTo(20, 6);
+    g.lineTo(15, 12);
+    g.strokePath();
+    // Battery body
+    g.fillStyle(0x5c5c5c, 1);
+    g.fillRect(8, 12, 8, 11);
+    g.fillStyle(0x9be86f, 1);
+    g.fillRect(9, 14, 6, 7);
+    g.fillStyle(0x8a8a8a, 1);
+    g.fillRect(10, 10, 4, 2);
+    g.generateTexture('batteryDrop', 24, 24);
+    g.destroy();
+  }
+
   update(_time, delta) {
     if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
       this.saveCharacterState();
@@ -781,11 +896,21 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    if (Phaser.Input.Keyboard.JustDown(this.flashToggleKey)) {
+      this.flashlightOn = !this.flashlightOn;
+      this.updateHud();
+    }
+
     // Snapshot velocity before physics step so the stomp callback has reliable data.
     this.kittenPrevVelY = this.kitten.body ? this.kitten.body.velocity.y : 0;
 
     if (this.zombieHitCooldown > 0) {
       this.zombieHitCooldown -= delta;
+    }
+
+    if (this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0) {
+      this.flashlightBattery = Math.max(0, this.flashlightBattery - (this.flashlightDrainPerSec * delta) / 1000);
+      this.updateHud();
     }
 
     this.updateChefHeli();
@@ -818,15 +943,17 @@ export class MainScene extends Phaser.Scene {
 
     if (leftDown && !rightDown) {
       this.kitten.setAccelerationX(-accel);
-      this.kitten.setFlipX(true);
+      this.kitten.setFlipX(false);
       this.lastMoveDir = -1;
+      this.facingDir = -1;
       if (this.eatCooldown <= 0) {
         this.kitten.setTexture(this.kittenSkin.run);
       }
     } else if (rightDown && !leftDown) {
       this.kitten.setAccelerationX(accel);
-      this.kitten.setFlipX(false);
+      this.kitten.setFlipX(true);
       this.lastMoveDir = 1;
+      this.facingDir = 1;
       if (this.eatCooldown <= 0) {
         this.kitten.setTexture(this.kittenSkin.run);
       }
@@ -866,18 +993,19 @@ export class MainScene extends Phaser.Scene {
   }
 
   updateFlashlightPosition() {
-    if (this.currentThemeKey !== 'night') {
+    const lightEnabled = this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0;
+    if (!lightEnabled) {
       this.flashlightCone.clear();
       this.flashlightHandle.clear();
       return;
     }
 
     const dir = this.kitten.body.velocity.x < -20 ? -1 : this.kitten.body.velocity.x > 20 ? 1 : this.lastMoveDir;
-    // Hand is at roughly mid-body height on the forward side.
-    const handX = this.kitten.x + dir * 14 * this.sizeMultiplier;
-    const handY = this.kitten.y - 26 * this.sizeMultiplier;
-    const length = 240 * this.sizeMultiplier;
-    const halfWidth = 80 * this.sizeMultiplier;
+    // Static hand anchor near the cat's middle; does not scale with cat growth.
+    const handX = this.kitten.x + dir * 10;
+    const handY = this.kitten.y - 14;
+    const length = 240;
+    const halfWidth = 80;
     const farX = handX + dir * length;
 
     this.flashlightTip.x = handX;
@@ -903,21 +1031,20 @@ export class MainScene extends Phaser.Scene {
     // Draw small gray flashlight handle at hand position.
     const h = this.flashlightHandle;
     h.clear();
-    const hs = this.sizeMultiplier;
     // Body of flashlight (barrel pointing in direction of movement).
     h.fillStyle(0x888888, 1);
-    h.fillRect(handX - 2 * hs, handY - 2 * hs, dir * 10 * hs, 4 * hs);
+    h.fillRect(handX - 2, handY - 2, dir * 10, 4);
     // Lens end (slightly wider circle at tip).
     h.fillStyle(0xddddcc, 1);
-    h.fillCircle(handX + dir * 8 * hs, handY, 2.5 * hs);
+    h.fillCircle(handX + dir * 8, handY, 2.5);
     // Grip (short perpendicular bar).
     h.fillStyle(0x666666, 1);
-    h.fillRect(handX - 1 * hs, handY, 2 * hs, 5 * hs);
+    h.fillRect(handX - 1, handY, 2, 5);
   }
 
   updateZombieLightEffect() {
     const zombies = this.zombieGroup.getChildren();
-    const lightActive = this.currentThemeKey === 'night';
+    const lightActive = this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0;
 
     for (let i = 0; i < zombies.length; i += 1) {
       const zombie = zombies[i];
