@@ -108,6 +108,11 @@ export class MainScene extends Phaser.Scene {
     this.flashlightBatteryMax = 100;
     this.flashlightBattery = 100;
     this.flashlightDrainPerSec = this.flashlightBatteryMax / 60;
+    this.jetpackFuelMax = 100;
+    this.jetpackFuel = 100;
+    this.jetpackFuelDrainPerSec = this.jetpackFuelMax / 25;
+    this.jetpackThrustPerSec = 920;
+    this.jetpackMaxLiftSpeed = -340;
     this.flashlightOn = true;
     this.facingDir = 1;
     this.jumpVelocity = -230;
@@ -148,7 +153,7 @@ export class MainScene extends Phaser.Scene {
       this.kittenExtraGravity = 0;
       this.moonWrapEnabled = true;
     } else {
-      this.jumpVelocity = -230;
+      this.jumpVelocity = -330;
       this.kittenExtraGravity = 300;
       this.moonWrapEnabled = false;
     }
@@ -180,20 +185,23 @@ export class MainScene extends Phaser.Scene {
     this.pizzaGroup = this.physics.add.group({ bounceY: 0, collideWorldBounds: false, maxSize: 180 });
     this.zombieGroup = this.physics.add.group({ collideWorldBounds: false, maxSize: 40 });
     this.batteryGroup = this.physics.add.group({ bounceY: 0.12, collideWorldBounds: false, maxSize: 20 });
+    this.fuelGroup = this.physics.add.group({ bounceY: 0.12, collideWorldBounds: false, maxSize: 20 });
 
     this.physics.add.overlap(this.kitten, this.pizzaGroup, this.handlePizzaCaught, null, this);
     this.physics.add.collider(this.pizzaGroup, this.ground, this.handleFoodHitGround, null, this);
     this.physics.add.collider(this.zombieGroup, this.ground);
     this.physics.add.collider(this.batteryGroup, this.ground, this.handleBatteryHitGround, null, this);
+    this.physics.add.collider(this.fuelGroup, this.ground, this.handleFuelHitGround, null, this);
     this.physics.add.collider(this.kitten, this.zombieGroup, this.handleZombieCollision, null, this);
     this.physics.add.overlap(this.zombieGroup, this.pizzaGroup, this.handleZombieEatFood, null, this);
     this.physics.add.overlap(this.kitten, this.batteryGroup, this.handleBatteryPickup, null, this);
+    this.physics.add.overlap(this.kitten, this.fuelGroup, this.handleFuelPickup, null, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
     this.restartKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.flashToggleKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-  this.fullscreenKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.fullscreenKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     this.input.keyboard.on('keydown', this.resumeAudio, this);
     this.input.on('pointerdown', this.resumeAudio, this);
@@ -204,11 +212,12 @@ export class MainScene extends Phaser.Scene {
     this.ensureVampireTexture();
     this.ensureAshTexture();
     this.ensureBatteryTexture();
+    this.ensureFuelTexture();
     this.applyTheme(this.currentThemeKey);
 
-    this.kittenShadow = this.add.ellipse(this.kitten.x, this.ground.y - 2, 42, 14, 0x000000, 0.24).setDepth(6);
-    this.heliShadow = this.add.ellipse(this.chefHeli.x, this.ground.y - 2, 110, 26, 0x000000, 0.18).setDepth(4);
-    this.rocketShadow = this.add.ellipse(this.pizzaPlane.x, this.ground.y - 2, 88, 20, 0x000000, 0.16).setDepth(4).setVisible(false);
+    this.kittenShadow = this.add.ellipse(this.kitten.x, this.getGroundSurfaceY(), 42, 14, 0x000000, 0.24).setDepth(6);
+    this.heliShadow = this.add.ellipse(this.chefHeli.x, this.getGroundSurfaceY(), 110, 26, 0x000000, 0.18).setDepth(4);
+    this.rocketShadow = this.add.ellipse(this.pizzaPlane.x, this.getGroundSurfaceY(), 88, 20, 0x000000, 0.16).setDepth(4).setVisible(false);
     this.createAstronautHelmet();
 
     if (this.loadedState) {
@@ -345,6 +354,9 @@ export class MainScene extends Phaser.Scene {
     this.batteryLabelText = this.add.text(20, 104, 'Battery', style).setDepth(20);
     this.batteryBarFrame = this.add.graphics().setDepth(20);
     this.batteryBarFill = this.add.graphics().setDepth(20);
+    this.fuelLabelText = this.add.text(20, 132, 'Fuel', style).setDepth(20);
+    this.fuelBarFrame = this.add.graphics().setDepth(20);
+    this.fuelBarFill = this.add.graphics().setDepth(20);
 
     this.add
       .text(WORLD_WIDTH - 20, 20, 'R: Menu   F: Fullscreen', {
@@ -383,6 +395,26 @@ export class MainScene extends Phaser.Scene {
     this.batteryBarFill.clear();
     this.batteryBarFill.fillStyle(0x54d66a, 1);
     this.batteryBarFill.fillRoundedRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * fillPct), barH - 4, 2);
+
+    const fuelVisible = this.currentMapKey === 'moon';
+    this.fuelLabelText.setVisible(fuelVisible);
+    if (!fuelVisible) {
+      this.fuelBarFrame.clear();
+      this.fuelBarFill.clear();
+      return;
+    }
+
+    const fuelBarY = barY + 28;
+    const fuelPct = Phaser.Math.Clamp(this.jetpackFuel / this.jetpackFuelMax, 0, 1);
+    this.fuelBarFrame.clear();
+    this.fuelBarFrame.lineStyle(2, 0x2f2633, 1);
+    this.fuelBarFrame.strokeRoundedRect(barX, fuelBarY, barW, barH, 3);
+    this.fuelBarFrame.fillStyle(0x2f2633, 1);
+    this.fuelBarFrame.fillRect(barX + barW, fuelBarY + 5, 4, 8);
+
+    this.fuelBarFill.clear();
+    this.fuelBarFill.fillStyle(0xffb547, 1);
+    this.fuelBarFill.fillRoundedRect(barX + 2, fuelBarY + 2, Math.max(0, (barW - 4) * fuelPct), barH - 4, 2);
   }
 
   getCurrentMode() {
@@ -450,6 +482,7 @@ export class MainScene extends Phaser.Scene {
     food.setGravityY(600 * mode.gravityScale);
     food.setAngularVelocity(Phaser.Math.Between(-65, 65));
     food.setDepth(7);
+    this.attachDropShadow(food, 34, 10, 0.15);
   }
 
   launchAirplaneBigPizza() {
@@ -496,9 +529,14 @@ export class MainScene extends Phaser.Scene {
       food.setGravityY(600 * mode.gravityScale * 0.9);
       food.setAngularVelocity(Phaser.Math.Between(-55, 55));
       food.setDepth(7);
+      this.attachDropShadow(food, 42, 12, 0.16);
 
       const batteryDropX = this.pizzaPlane.x + (fromLeft ? -85 : 85);
-      this.spawnBatteryDrop(batteryDropX, this.pizzaPlane.y - 22, fromLeft ? -1 : 1);
+      if (this.currentMapKey === 'moon') {
+        this.spawnFuelDrop(batteryDropX, this.pizzaPlane.y - 22, fromLeft ? -1 : 1);
+      } else {
+        this.spawnBatteryDrop(batteryDropX, this.pizzaPlane.y - 22, fromLeft ? -1 : 1);
+      }
     });
   }
 
@@ -519,6 +557,27 @@ export class MainScene extends Phaser.Scene {
     battery.setDepth(8);
     battery.onGround = false;
     battery.groundTimer = null;
+    this.attachDropShadow(battery, 28, 9, 0.14);
+  }
+
+  spawnFuelDrop(x, y, driftDir) {
+    const fuel = this.fuelGroup.get(x, y, 'jetFuelDrop');
+    if (!fuel) {
+      return;
+    }
+    fuel.setTexture('jetFuelDrop');
+    fuel.setActive(true);
+    fuel.setVisible(true);
+    fuel.body.enable = true;
+    fuel.body.setAllowGravity(true);
+    fuel.setScale(1);
+    fuel.setVelocity(Phaser.Math.Between(6, 13) * driftDir, Phaser.Math.Between(10, 20));
+    fuel.setGravityY(42);
+    fuel.setDragX(48);
+    fuel.setDepth(8);
+    fuel.onGround = false;
+    fuel.groundTimer = null;
+    this.attachDropShadow(fuel, 30, 9, 0.14);
   }
 
   spawnZombie() {
@@ -537,7 +596,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     if (!zombie.shadow || !zombie.shadow.active) {
-      zombie.shadow = this.add.ellipse(startX, this.ground.y - 2, 36, 12, 0x000000, 0.2).setDepth(6);
+      zombie.shadow = this.add.ellipse(startX, this.getGroundSurfaceY(), 36, 12, 0x000000, 0.2).setDepth(6);
     }
     zombie.setActive(true);
     zombie.setVisible(true);
@@ -582,6 +641,7 @@ export class MainScene extends Phaser.Scene {
 
     food.groundTimer = this.time.delayedCall(3000, () => {
       if (food.active && !food.caught) {
+        this.destroyDropShadow(food);
         food.disableBody(true, true);
       }
     });
@@ -602,7 +662,29 @@ export class MainScene extends Phaser.Scene {
 
     battery.groundTimer = this.time.delayedCall(6000, () => {
       if (battery.active) {
+        this.destroyDropShadow(battery);
         battery.disableBody(true, true);
+      }
+    });
+  }
+
+  handleFuelHitGround(objA, objB) {
+    const fuel = this.fuelGroup && this.fuelGroup.contains(objA) ? objA : objB;
+    if (!fuel || !this.fuelGroup.contains(fuel) || !fuel.active || fuel.onGround) {
+      return;
+    }
+
+    fuel.onGround = true;
+    fuel.setAngularVelocity(0);
+    if (fuel.body && fuel.body.velocity) {
+      fuel.body.velocity.x *= 0.25;
+      fuel.body.velocity.y = 0;
+    }
+
+    fuel.groundTimer = this.time.delayedCall(6000, () => {
+      if (fuel.active) {
+        this.destroyDropShadow(fuel);
+        fuel.disableBody(true, true);
       }
     });
   }
@@ -615,10 +697,26 @@ export class MainScene extends Phaser.Scene {
       battery.groundTimer.remove(false);
       battery.groundTimer = null;
     }
+    this.destroyDropShadow(battery);
     battery.disableBody(true, true);
     this.flashlightBattery = this.flashlightBatteryMax;
     this.updateHud();
     this.showCatchPopup(this.kitten.x, this.kitten.y - 34, 'BATTERY +100%');
+  }
+
+  handleFuelPickup(_kitten, fuel) {
+    if (!fuel.active) {
+      return;
+    }
+    if (fuel.groundTimer) {
+      fuel.groundTimer.remove(false);
+      fuel.groundTimer = null;
+    }
+    this.destroyDropShadow(fuel);
+    fuel.disableBody(true, true);
+    this.jetpackFuel = this.jetpackFuelMax;
+    this.updateHud();
+    this.showCatchPopup(this.kitten.x, this.kitten.y - 34, 'FUEL +100%');
   }
 
   handleZombieEatFood(objA, objB) {
@@ -640,6 +738,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     const value = food.foodValue || 1;
+    this.destroyDropShadow(food);
     food.disableBody(true, true);
 
     zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.08 * value, 1, 2.6);
@@ -682,6 +781,7 @@ export class MainScene extends Phaser.Scene {
       food.groundTimer.remove(false);
       food.groundTimer = null;
     }
+    this.destroyDropShadow(food);
     food.disableBody(true, true);
 
     this.foodCaught += 1;
@@ -1077,6 +1177,51 @@ export class MainScene extends Phaser.Scene {
     g.destroy();
   }
 
+  ensureFuelTexture() {
+    if (this.textures.exists('jetFuelDrop')) {
+      return;
+    }
+
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    // Small capsule with moon-orange fuel core
+    g.fillStyle(0x494949, 1);
+    g.fillRoundedRect(6, 6, 12, 16, 3);
+    g.fillStyle(0xffbd59, 1);
+    g.fillRoundedRect(8, 9, 8, 10, 2);
+    g.fillStyle(0x2b2b2b, 1);
+    g.fillRect(10, 3, 4, 3);
+    g.fillStyle(0xe5e5e5, 0.9);
+    g.fillRect(9, 11, 1, 6);
+    g.generateTexture('jetFuelDrop', 24, 24);
+    g.destroy();
+  }
+
+  getGroundSurfaceY() {
+    if (this.ground && this.ground.body) {
+      return this.ground.body.top;
+    }
+    return this.ground.y - this.ground.displayHeight * 0.5;
+  }
+
+  attachDropShadow(item, baseWidth, baseHeight, alpha = 0.15) {
+    if (!item) {
+      return;
+    }
+    if (!item.shadow || !item.shadow.active) {
+      item.shadow = this.add.ellipse(item.x, this.getGroundSurfaceY(), baseWidth, baseHeight, 0x000000, alpha).setDepth(6);
+    }
+    item.shadowBaseWidth = baseWidth;
+    item.shadowBaseHeight = baseHeight;
+    item.shadow.setVisible(true);
+  }
+
+  destroyDropShadow(item) {
+    if (item && item.shadow) {
+      item.shadow.destroy();
+      item.shadow = null;
+    }
+  }
+
   update(_time, delta) {
     if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
       this.saveCharacterState();
@@ -1084,7 +1229,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.flashToggleKey)) {
+    if (this.currentMapKey !== 'moon' && Phaser.Input.Keyboard.JustDown(this.flashToggleKey)) {
       this.flashlightOn = !this.flashlightOn;
       this.updateHud();
     }
@@ -1110,6 +1255,11 @@ export class MainScene extends Phaser.Scene {
       this.updateHud();
     }
 
+    if (this.currentMapKey === 'moon' && this.flashToggleKey.isDown && this.jetpackFuel > 0) {
+      this.jetpackFuel = Math.max(0, this.jetpackFuel - (this.jetpackFuelDrainPerSec * delta) / 1000);
+      this.updateHud();
+    }
+
     this.updateChefHeli();
     this.updateKittenMovement(delta);
     if (this.moonWrapEnabled) {
@@ -1130,17 +1280,17 @@ export class MainScene extends Phaser.Scene {
   updateShadows() {
     if (this.kittenShadow?.active) {
       this.kittenShadow.x = this.kitten.x;
-      this.kittenShadow.y = this.ground.y - 2;
+      this.kittenShadow.y = this.getGroundSurfaceY() + 1;
       this.kittenShadow.width = 42 * Phaser.Math.Clamp(1 + this.sizeMultiplier * 0.2, 1, 1.6);
     }
     if (this.heliShadow?.active) {
       this.heliShadow.x = this.chefHeli.x;
-      this.heliShadow.y = this.ground.y - 8;
+      this.heliShadow.y = this.getGroundSurfaceY() + 1;
     }
     if (this.rocketShadow?.active) {
       this.rocketShadow.setVisible(this.pizzaPlane.visible);
       this.rocketShadow.x = this.pizzaPlane.x;
-      this.rocketShadow.y = this.ground.y - 9;
+      this.rocketShadow.y = this.getGroundSurfaceY() + 1;
     }
     const enemies = this.zombieGroup.getChildren();
     for (let i = 0; i < enemies.length; i += 1) {
@@ -1148,10 +1298,46 @@ export class MainScene extends Phaser.Scene {
       if (enemy.shadow) {
         enemy.shadow.setVisible(enemy.active);
         enemy.shadow.x = enemy.x;
-        enemy.shadow.y = this.ground.y - 2;
+        enemy.shadow.y = this.getGroundSurfaceY() + 1;
         enemy.shadow.width = 36 * Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.2);
       }
     }
+
+    const pizzaItems = this.pizzaGroup.getChildren();
+    for (let i = 0; i < pizzaItems.length; i += 1) {
+      this.updateDropShadow(pizzaItems[i]);
+    }
+    const batteryItems = this.batteryGroup.getChildren();
+    for (let i = 0; i < batteryItems.length; i += 1) {
+      this.updateDropShadow(batteryItems[i]);
+    }
+    const fuelItems = this.fuelGroup.getChildren();
+    for (let i = 0; i < fuelItems.length; i += 1) {
+      this.updateDropShadow(fuelItems[i]);
+    }
+  }
+
+  updateDropShadow(item) {
+    if (!item || !item.shadow) {
+      return;
+    }
+
+    if (!item.active || !item.visible || !item.body || !item.body.enable) {
+      item.shadow.setVisible(false);
+      return;
+    }
+
+    const groundY = this.getGroundSurfaceY();
+    const altitude = Phaser.Math.Clamp(groundY - item.y, 0, 540);
+    const shrink = Phaser.Math.Clamp(1 - altitude / 540, 0.22, 1);
+    const baseW = item.shadowBaseWidth || 28;
+    const baseH = item.shadowBaseHeight || 10;
+
+    item.shadow.setVisible(true);
+    item.shadow.x = item.x;
+    item.shadow.y = groundY + 1;
+    item.shadow.width = baseW * shrink;
+    item.shadow.height = baseH;
   }
 
   updateChefHeli() {
@@ -1172,6 +1358,11 @@ export class MainScene extends Phaser.Scene {
 
     if (jumpPressed && (this.kitten.body.blocked.down || this.kitten.body.touching.down)) {
       this.kitten.setVelocityY(this.jumpVelocity);
+    }
+
+    if (this.currentMapKey === 'moon' && this.flashToggleKey.isDown && this.jetpackFuel > 0) {
+      const lift = this.jetpackThrustPerSec * (delta / 1000);
+      this.kitten.setVelocityY(Math.max(this.jetpackMaxLiftSpeed, this.kitten.body.velocity.y - lift));
     }
 
     if (leftDown && !rightDown) {
@@ -1210,6 +1401,7 @@ export class MainScene extends Phaser.Scene {
     for (let i = 0; i < children.length; i += 1) {
       const food = children[i];
       if (food.active && food.y > WORLD_HEIGHT + 40) {
+        this.destroyDropShadow(food);
         food.disableBody(true, true);
       }
     }
