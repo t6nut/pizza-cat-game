@@ -8,6 +8,7 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
   scene.currentMapKey = mapKey;
   scene.bgSky.setVisible(true);
   scene.bgGround.setVisible(true);
+  scene.bgGround.setAlpha(1);
   scene.bgSky.setFillStyle(map.skyColor, 1);
   scene.bgGround.setFillStyle(map.groundColor, 1);
 
@@ -139,7 +140,8 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
       { x: 940, baseW: 130, h: 90 },
     ];
     for (const pd of pyramidData) {
-      const baseY = worldHeight - 138;
+      // baseY sunk into sand so pyramids emerge from dunes, not float above them
+      const baseY = worldHeight - 58;
       const pyr = scene.add.triangle(
         pd.x, baseY - pd.h,
         -(pd.baseW / 2), pd.h,
@@ -162,7 +164,7 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
 
     // Sphinx — at x=330, sitting on ground
     const sphinxX = 330;
-    const sphinxBaseY = worldHeight - 138;
+    const sphinxBaseY = worldHeight - 58;
     // Body (crouching lion form)
     const sphinxBody = scene.add.rectangle(sphinxX + 10, sphinxBaseY - 20, 80, 34, 0xc8963c, 0.9).setDepth(3);
     const sphinxFront = scene.add.rectangle(sphinxX - 28, sphinxBaseY - 16, 22, 28, 0xc8963c, 0.9).setDepth(3);

@@ -120,7 +120,7 @@ export class MainScene extends Phaser.Scene {
     this.flashlightHalfWidth = 0;
     this.flashlightBatteryMax = 100;
     this.flashlightBattery = 100;
-    this.flashlightDrainPerSec = this.flashlightBatteryMax / 60;
+    this.flashlightDrainPerSec = this.flashlightBatteryMax / 30;
     this.jetpackFuelMax = 10;
     this.jetpackFuel = 10;
     this.jetpackFuelDrainPerSec = this.jetpackFuelMax / 10;

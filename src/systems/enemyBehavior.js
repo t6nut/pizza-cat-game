@@ -102,6 +102,10 @@ export function burnVampireToAsh(scene, enemy) {
     enemy.umbrella.destroy();
     enemy.umbrella = null;
   }
+  if (enemy.hpBar) {
+    enemy.hpBar.destroy();
+    enemy.hpBar = null;
+  }
   const ash = scene.add.sprite(enemy.x, enemy.y + 5, 'vampireAsh').setDepth(7);
   scene.tweens.add({
     targets: ash,
@@ -152,6 +156,10 @@ export function updateZombieLightEffect(scene, delta) {
           zombie.setTint(0xd8c3ff);
         }
         zombie.setVelocityX(zombie.moveDir * zombie.moveSpeed);
+        if (zombie.hpBar) {
+          zombie.hpBar.destroy();
+          zombie.hpBar = null;
+        }
       }
       zombie.vampireLightMs = 0;
       zombie.laserBurnMs = 0;
@@ -173,7 +181,7 @@ export function updateZombieLightEffect(scene, delta) {
         }
       } else if (zombie.enemyType === 'vampire') {
         zombie.vampireLightMs = (zombie.vampireLightMs || 0) + delta;
-        if (zombie.vampireLightMs >= 3000) {
+        if (zombie.vampireLightMs >= 1500) {
           scene.burnVampireToAsh(zombie);
           continue;
         }
@@ -182,6 +190,26 @@ export function updateZombieLightEffect(scene, delta) {
         zombie.litStopped = true;
         zombie.setVelocityX(0);
         zombie.setTint(dayLaser ? 0xff5d5d : zombie.enemyType === 'vampire' ? 0xffb38f : 0xe9f6ff);
+        // Create HP bar for vampires hit by flashlight
+        if (!dayLaser && zombie.enemyType === 'vampire' && !zombie.hpBar) {
+          zombie.hpBar = scene.add.graphics().setDepth(10);
+        }
+      }
+      // Update vampire HP bar each frame while lit
+      if (!dayLaser && zombie.enemyType === 'vampire' && zombie.hpBar) {
+        const barW = 40;
+        const barH = 6;
+        const bx = zombie.x - barW / 2;
+        const by = zombie.y + (zombie.displayHeight * 0.55) + 4;
+        const fill = Math.max(0, 1 - (zombie.vampireLightMs || 0) / 1500);
+        zombie.hpBar.clear();
+        // Background
+        zombie.hpBar.fillStyle(0x220000, 0.8);
+        zombie.hpBar.fillRect(bx, by, barW, barH);
+        // Health fill (red→orange as it drains)
+        const hpColor = fill > 0.5 ? 0xff4444 : fill > 0.2 ? 0xff8800 : 0xffdd00;
+        zombie.hpBar.fillStyle(hpColor, 0.95);
+        zombie.hpBar.fillRect(bx + 1, by + 1, Math.max(0, (barW - 2) * fill), barH - 2);
       }
     } else if (zombie.litStopped) {
       zombie.litStopped = false;
@@ -189,6 +217,10 @@ export function updateZombieLightEffect(scene, delta) {
       if (!dayLaser && zombie.enemyType === 'vampire') {
         zombie.setTint(0xd8c3ff);
         zombie.vampireLightMs = Math.max(0, (zombie.vampireLightMs || 0) - delta * 1.2);
+        if (zombie.hpBar) {
+          zombie.hpBar.destroy();
+          zombie.hpBar = null;
+        }
       }
       zombie.laserBurnMs = Math.max(0, (zombie.laserBurnMs || 0) - delta * 1.3);
       zombie.setVelocityX(zombie.moveDir * zombie.moveSpeed);
