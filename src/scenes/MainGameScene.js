@@ -126,6 +126,7 @@ export class MainScene extends Phaser.Scene {
     this.musicStep = 0;
     this.jetpackPack = null;
     this.jetpackFlames = null;
+    this.eatTween = null;
   }
 
   init(data) {
@@ -1097,13 +1098,22 @@ export class MainScene extends Phaser.Scene {
   }
 
   playEatingAnimation() {
-    this.tweens.add({
+    if (this.eatTween) {
+      this.eatTween.stop();
+      this.eatTween = null;
+    }
+    this.kitten.setScale(this.sizeMultiplier);
+    this.eatTween = this.tweens.add({
       targets: this.kitten,
       scaleX: this.sizeMultiplier * 1.08,
       scaleY: this.sizeMultiplier * 0.92,
       yoyo: true,
       duration: 90,
       ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.kitten.setScale(this.sizeMultiplier);
+        this.eatTween = null;
+      },
     });
   }
 
@@ -1401,21 +1411,23 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    const scale = Phaser.Math.Clamp(this.sizeMultiplier || 1, 1, 8);
-    const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * scale), 14, 42);
-    const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * scale), 10, 32);
-    // Cat sprites have transparent bottom padding; compensate so feet stay glued to ground while scaling.
-    const spriteBottomPad = this.kitten.displayHeight * (2 / 24);
-    const offsetX = Math.max(0, (this.kitten.displayWidth - bodyW) * 0.5);
-    const offsetY = Math.max(0, this.kitten.displayHeight - bodyH - spriteBottomPad);
+    const displayW = Math.max(1, this.kitten.displayWidth);
+    const displayH = Math.max(1, this.kitten.displayHeight);
+    // Keep hitbox proportional to rendered size so it remains valid at large growth values.
+    const bodyW = Math.max(14, Math.round(displayW * 0.5));
+    const bodyH = Math.max(10, Math.round(displayH * 0.5));
+    const spriteBottomPad = displayH * (2 / 24);
+    const offsetX = Math.max(0, (displayW - bodyW) * 0.5);
+    const offsetY = Math.max(0, displayH - bodyH - spriteBottomPad);
     body.setSize(bodyW, bodyH, false);
     body.setOffset(offsetX, offsetY);
 
     const groundTop = this.getGroundSurfaceY();
-    const nearGround = (body.blocked.down || body.touching.down) && body.velocity.y >= 0;
+    const nearGround = ((body.blocked.down || body.touching.down) || body.bottom >= groundTop - 2) && body.velocity.y >= 0;
     if (nearGround) {
       body.y = groundTop - body.height;
       this.kitten.y = groundTop;
+      body.velocity.y = 0;
     }
   }
 
@@ -1423,12 +1435,13 @@ export class MainScene extends Phaser.Scene {
     if (!enemy || !enemy.body) {
       return;
     }
-    const enemyScale = Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.6);
-    const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * enemyScale), 14, 42);
-    const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * enemyScale), 10, 32);
-    // Center the body within the scaled sprite.
-    const offsetX = Math.max(0, (enemy.displayWidth - bodyW) * 0.5);
-    const offsetY = Math.max(0, (enemy.displayHeight - bodyH) * 0.5);
+    const displayW = Math.max(1, enemy.displayWidth);
+    const displayH = Math.max(1, enemy.displayHeight);
+    const bodyW = Math.max(14, Math.round(displayW * 0.5));
+    const bodyH = Math.max(10, Math.round(displayH * 0.46));
+    const enemyBottomPad = displayH * (2 / 26);
+    const offsetX = Math.max(0, (displayW - bodyW) * 0.5);
+    const offsetY = Math.max(0, displayH - bodyH - enemyBottomPad);
     enemy.body.setSize(bodyW, bodyH, false);
     enemy.body.setOffset(offsetX, offsetY);
     const groundTop = this.getGroundSurfaceY();
@@ -1788,13 +1801,6 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    if (this.kitten.body.blocked.down || this.kitten.body.touching.down) {
-      const body = this.kitten.body;
-      const groundTop = this.getGroundSurfaceY();
-      if (body.velocity.y >= 0 && Math.abs(body.bottom - groundTop) > 1) {
-        body.y = groundTop - body.height;
-      }
-    }
   }
 
   cleanupMissedPizza() {
