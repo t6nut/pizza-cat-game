@@ -269,6 +269,17 @@ export class TitleScene extends Phaser.Scene {
     // Use the SAME applyMap as the game — visually identical
     applyMap(this, map, W, H);
 
+    // Apply night sky/ground overrides for maps that don't handle it internally
+    // (city handles it inside applyMap; moon is always night via mapSettings)
+    if (isNight && !isMoon && map !== 'city') {
+      this.bgSky.setFillStyle(0x101a34, 0.92);
+      if (map === 'beach') {
+        this.bgGround.setFillStyle(0x7b6b4d, 1);
+      } else if (map === 'desert') {
+        this.bgGround.setFillStyle(0x4a3820, 1);
+      }
+    }
+
     // Overlay: clouds / stars / sun / moon
     for (let i = 0; i < this.menuClouds.length; i += 1) {
       this.menuClouds[i].setVisible(!isNight && !isMoon);
