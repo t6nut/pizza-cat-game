@@ -1,4 +1,4 @@
-import { drawNightBackground, TEXT_STYLE } from '../utils.js';
+import { TEXT_STYLE } from '../utils.js';
 
 const W = 1280;
 const H = 720;
@@ -33,7 +33,7 @@ const ENEMY_OPTIONS = {
   off:      { label: 'Off'      },
 };
 
-const SAVE_PREFIX = 'cat_game_save_';
+const GROWTH_SAVE_PREFIX = 'cat_game_growth_';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -44,11 +44,20 @@ export class TitleScene extends Phaser.Scene {
     this.selectedMap = null;
     this.selectedZombies = null;
     this.selectedEnemyType = null;
-    this.selectedRunMode = null;
     this.optionButtons = {};
     this.charPreviewSprite = null;
     this.charPreviewLabel = null;
+    this.charPreviewSize = null;
     this.vehicleDescText = null;
+    this.menuSky = null;
+    this.menuGround = null;
+    this.menuStars = [];
+    this.menuClouds = [];
+    this.menuSun = null;
+    this.menuMoon = null;
+    this.menuJetpack = null;
+    this.menuJetpackFlames = null;
+    this.menuBackdropBuildings = [];
   }
 
   preload() {
@@ -72,7 +81,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create() {
-    drawNightBackground(this, W, H);
+    this.createMenuBackdrop();
 
     // Helicopter flies in from the left then hovers
     this.heli = this.add.sprite(-150, 88, 'chefHeli');
@@ -149,6 +158,9 @@ export class TitleScene extends Phaser.Scene {
     this.charPreviewLabel = this.add.text(prevX, prevY + 70, 'Orange Cat', {
       ...TEXT_STYLE, fontSize: '13px', color: '#d8eaff', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20);
+    this.charPreviewSize = this.add.text(prevX, prevY + 90, 'Size: 1.00x', {
+      ...TEXT_STYLE, fontSize: '12px', color: '#ffd38f', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(20);
 
     this.createOptionsPanel();
 
@@ -161,7 +173,6 @@ export class TitleScene extends Phaser.Scene {
     this.selectOption('theme', 'day');
     this.selectOption('map', 'city');
     this.selectOption('enemies', 'zombies');
-    this.selectOption('session', 'new');
   }
 
   _toggleFullscreen() {
@@ -171,6 +182,117 @@ export class TitleScene extends Phaser.Scene {
     } else {
       doc.documentElement.requestFullscreen();
     }
+  }
+
+  createMenuBackdrop() {
+    this.menuSky = this.add.rectangle(W / 2, H / 2, W, H, 0x99e8ff).setDepth(0);
+    this.menuGround = this.add.rectangle(W / 2, H - 108, W, 216, 0x6d7686).setDepth(1);
+
+    for (let i = 0; i < 12; i += 1) {
+      const x = 42 + i * 112;
+      const h = 100 + (i % 4) * 24;
+      const building = this.add.rectangle(x, H - 172 - h * 0.5, 76, h, 0x273348, 0.86).setDepth(2);
+      this.menuBackdropBuildings.push(building);
+    }
+
+    for (let i = 0; i < 16; i += 1) {
+      const cloud = this.add.ellipse(60 + i * 84, 70 + (i % 2) * 22, 90, 32, 0xe8f7ff, 0.58).setDepth(2);
+      cloud.setVisible(false);
+      this.menuClouds.push(cloud);
+    }
+
+    for (let i = 0; i < 45; i += 1) {
+      const star = this.add.circle(
+        Phaser.Math.Between(14, W - 14),
+        Phaser.Math.Between(10, 230),
+        Phaser.Math.Between(1, 2),
+        0xe7f4ff,
+        Phaser.Math.FloatBetween(0.45, 0.95),
+      ).setDepth(2);
+      star.setVisible(false);
+      this.menuStars.push(star);
+    }
+
+    this.menuSun = this.add.circle(1080, 82, 30, 0xffec9d, 0.92).setDepth(2);
+    this.menuMoon = this.add.circle(1080, 82, 26, 0xeaf4ff, 0.95).setDepth(2).setVisible(false);
+
+    this.menuJetpack = this.add.graphics().setDepth(7);
+    this.menuJetpackFlames = this.add.graphics().setDepth(6);
+  }
+
+  updateMenuBackdrop() {
+    const map = this.selectedMap || 'city';
+    const theme = this.selectedTheme || 'day';
+    const isMoon = map === 'moon';
+    const isNight = theme === 'night' || isMoon;
+
+    const colors = {
+      city: { daySky: 0x95d5ff, dayGround: 0x6d7686, nightSky: 0x101a34, nightGround: 0x3a4558 },
+      desert: { daySky: 0xfecf86, dayGround: 0xd8b06a, nightSky: 0x2d2033, nightGround: 0x6f5a45 },
+      beach: { daySky: 0x8de0ff, dayGround: 0xe3d39b, nightSky: 0x10203f, nightGround: 0x7b6b4d },
+      moon: { daySky: 0x0c1330, dayGround: 0x8f97ab, nightSky: 0x0c1330, nightGround: 0x8f97ab },
+    };
+    const palette = colors[map] || colors.city;
+
+    this.menuSky.setFillStyle(isNight ? palette.nightSky : palette.daySky, 1);
+    this.menuGround.setFillStyle(isNight ? palette.nightGround : palette.dayGround, isMoon ? 0.42 : 0.96);
+
+    for (let i = 0; i < this.menuClouds.length; i += 1) {
+      this.menuClouds[i].setVisible(!isNight && !isMoon);
+    }
+    for (let i = 0; i < this.menuStars.length; i += 1) {
+      this.menuStars[i].setVisible(isNight);
+    }
+    this.menuSun.setVisible(!isNight && !isMoon);
+    this.menuMoon.setVisible(isNight);
+
+    const buildingColor = isNight ? 0x273348 : 0x7f8ea4;
+    for (let i = 0; i < this.menuBackdropBuildings.length; i += 1) {
+      this.menuBackdropBuildings[i].setFillStyle(buildingColor, 0.9);
+    }
+
+    if (this.heli) {
+      this.heli.setTexture(isMoon ? 'ufoSprite' : 'chefHeli');
+    }
+    if (this.vehicleDescText) {
+      this.vehicleDescText.setText(isMoon
+        ? 'A UFO and rocketship are dropping pizza!'
+        : 'A helicopter and airplane are dropping pizza!');
+    }
+  }
+
+  updateMenuJetpack(time) {
+    if (!this.menuJetpack || !this.menuJetpackFlames) {
+      return;
+    }
+
+    this.menuJetpack.clear();
+    this.menuJetpackFlames.clear();
+
+    if (this.selectedMap !== 'moon') {
+      return;
+    }
+
+    const catX = this.charPreviewSprite ? this.charPreviewSprite.x : W / 2;
+    const catY = this.charPreviewSprite ? this.charPreviewSprite.y : 300;
+    const s = 1.4;
+    const packX = catX - 22;
+    const packY = catY + 8;
+
+    this.menuJetpack.fillStyle(0x5d6573, 0.96);
+    this.menuJetpack.fillRoundedRect(packX - 8 * s, packY - 10 * s, 16 * s, 20 * s, 3 * s);
+    this.menuJetpack.fillStyle(0x93a3b8, 1);
+    this.menuJetpack.fillRect(packX - 3 * s, packY - 5 * s, 6 * s, 8 * s);
+
+    const flicker = 0.8 + Math.sin(time * 0.018) * 0.2;
+    const flameLen = 26 * flicker;
+
+    this.menuJetpackFlames.fillStyle(0xffb347, 0.94);
+    this.menuJetpackFlames.fillTriangle(packX - 5, packY + 13, packX + 1, packY + 13, packX - 2, packY + 13 + flameLen);
+    this.menuJetpackFlames.fillTriangle(packX - 1, packY + 13, packX + 5, packY + 13, packX + 2, packY + 13 + flameLen);
+    this.menuJetpackFlames.fillStyle(0xfff2c7, 0.82);
+    this.menuJetpackFlames.fillTriangle(packX - 4, packY + 14, packX, packY + 14, packX - 2, packY + 10 + flameLen * 0.65);
+    this.menuJetpackFlames.fillTriangle(packX, packY + 14, packX + 4, packY + 14, packX + 2, packY + 10 + flameLen * 0.65);
   }
 
   createOptionsPanel() {
@@ -195,6 +317,7 @@ export class TitleScene extends Phaser.Scene {
         this.charPreviewSprite.setTexture(CHARACTER_OPTIONS[value].idle);
         this.charPreviewLabel.setText(CHARACTER_OPTIONS[value].label);
       }
+      this.refreshSelectedCatSize();
     }, panelCX);
 
     // --- Row 2: Mode ---
@@ -208,29 +331,30 @@ export class TitleScene extends Phaser.Scene {
     lbl(panelCX + 170, panelY, 'Map');
     this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 23, (value) => {
       this.selectedTheme = value;
+      this.updateMenuBackdrop();
     }, panelCX - 320);
     this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 23, (value) => {
       this.selectedMap = value;
-      if (value === 'moon') {
-        this.heli.setTexture('ufoSprite');
-        if (this.vehicleDescText) this.vehicleDescText.setText('A UFO and rocketship are dropping pizza!');
-      } else {
-        this.heli.setTexture('chefHeli');
-        if (this.vehicleDescText) this.vehicleDescText.setText('A helicopter and airplane are dropping pizza!');
-      }
+      this.updateMenuBackdrop();
     }, panelCX + 170);
 
-    // --- Row 4: Enemies (left) + Session (right) ---
+    // --- Row 4: Enemies (left) + Size reset (right) ---
     lbl(panelCX - 270, panelY + 58, 'Enemies');
-    lbl(panelCX + 285, panelY + 58, 'Session');
+    lbl(panelCX + 285, panelY + 58, 'Size');
     this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 80, (value) => {
       this.selectedEnemyType = value;
       this.selectedZombies = value === 'off' ? 'off' : 'on';
     }, panelCX - 270, 128, 115);
-    this.createOptionRow('session', ['new', 'continue'],
-      { new: { label: 'New' }, continue: { label: 'Continue' } }, panelY + 80, (value) => {
-        this.selectedRunMode = value;
-      }, panelCX + 285, 148, 132);
+
+    this.resetSizeButton = this.add.rectangle(panelCX + 285, panelY + 80, 148, 32, 0x283c5c, 1)
+      .setDepth(17).setStrokeStyle(2, 0x89b8ff, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.resetSizeText = this.add.text(panelCX + 285, panelY + 80, 'Reset Size', {
+      ...TEXT_STYLE, fontSize: '15px', color: '#e2f0ff', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(18);
+    this.resetSizeButton.on('pointerover', () => this.resetSizeButton.setFillStyle(0x33517a));
+    this.resetSizeButton.on('pointerout', () => this.resetSizeButton.setFillStyle(0x283c5c));
+    this.resetSizeButton.on('pointerdown', () => this.resetSelectedCharacterGrowth());
 
     // --- Start button ---
     this.startButton = this.add.rectangle(panelCX, panelY + 116, 290, 42, 0x4d596b, 1)
@@ -240,10 +364,6 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(18);
     this.startButton.setInteractive({ useHandCursor: true });
     this.startButton.on('pointerdown', () => { if (this.canStart()) this._start(); });
-
-    this.sessionHint = this.add.text(panelCX + 285, panelY + 101, 'Pick a character to check save', {
-      ...TEXT_STYLE, fontSize: '11px', color: '#d2dbeb', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(18);
 
     this.updateStartButtonState();
   }
@@ -279,7 +399,6 @@ export class TitleScene extends Phaser.Scene {
         box.selected = true;
         box.setFillStyle(0x3b8a5f);
         onSelect(key);
-        if (groupName === 'character') this.refreshContinueAvailability();
         this.updateStartButtonState();
       });
 
@@ -299,25 +418,18 @@ export class TitleScene extends Phaser.Scene {
     target.box.selected = true;
     target.box.setFillStyle(0x3b8a5f);
     target.onSelect(key);
-    if (groupName === 'character') this.refreshContinueAvailability();
     this.updateStartButtonState();
   }
 
   canStart() {
-    if (!(this.selectedCharacter && this.selectedMode && this.selectedTheme &&
-          this.selectedMap && this.selectedEnemyType && this.selectedRunMode)) {
-      return false;
-    }
-    if (this.selectedRunMode === 'continue') {
-      return this.hasSaveForCharacter(this.selectedCharacter);
-    }
-    return true;
+    return !!(this.selectedCharacter && this.selectedMode && this.selectedTheme &&
+      this.selectedMap && this.selectedEnemyType);
   }
 
   updateStartButtonState() {
     if (this.canStart()) {
       this.startButton.setFillStyle(0xff9a3d);
-      this.startText.setText(this.selectedRunMode === 'continue' ? 'Continue Game' : 'Start New Game');
+      this.startText.setText('Start Game');
       this.startText.setColor('#111111');
     } else {
       this.startButton.setFillStyle(0x4d596b);
@@ -326,40 +438,42 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
-  getSaveKey(characterKey) {
-    return `${SAVE_PREFIX}${characterKey}`;
+  getGrowthKey(characterKey) {
+    return `${GROWTH_SAVE_PREFIX}${characterKey}`;
   }
 
-  hasSaveForCharacter(characterKey) {
+  getGrowthForCharacter(characterKey) {
     if (!characterKey) {
-      return false;
+      return 1;
+    }
+
+    try {
+      const raw = localStorage.getItem(this.getGrowthKey(characterKey));
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed?.sizeMultiplier ? Math.max(1, parsed.sizeMultiplier) : 1;
+    } catch (_err) {
+      return 1;
+    }
+  }
+
+  refreshSelectedCatSize() {
+    if (!this.charPreviewSize) {
+      return;
+    }
+    const size = this.getGrowthForCharacter(this.selectedCharacter);
+    this.charPreviewSize.setText(`Size: ${size.toFixed(2)}x`);
+  }
+
+  resetSelectedCharacterGrowth() {
+    if (!this.selectedCharacter) {
+      return;
     }
     try {
-      return !!localStorage.getItem(this.getSaveKey(characterKey));
+      localStorage.removeItem(this.getGrowthKey(this.selectedCharacter));
     } catch (_err) {
-      return false;
+      // ignore storage availability issues
     }
-  }
-
-  refreshContinueAvailability() {
-    const hasSave = this.hasSaveForCharacter(this.selectedCharacter);
-    const row = this.optionButtons.session || [];
-
-    for (let i = 0; i < row.length; i += 1) {
-      const entry = row[i];
-      if (entry.key === 'continue') {
-        entry.box.alpha = hasSave ? 1 : 0.45;
-        if (!hasSave && entry.box.selected) {
-          entry.box.selected = false;
-          entry.box.setFillStyle(0x283c5c);
-          this.selectedRunMode = null;
-        }
-      }
-    }
-
-    if (this.sessionHint) {
-      this.sessionHint.setText(hasSave ? 'Save found \u2713' : 'No save found');
-    }
+    this.refreshSelectedCatSize();
     this.updateStartButtonState();
   }
 
@@ -405,6 +519,10 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
+  update(time) {
+    this.updateMenuJetpack(time);
+  }
+
   _start() {
     this.scene.start('MainScene', {
       character: this.selectedCharacter,
@@ -413,7 +531,7 @@ export class TitleScene extends Phaser.Scene {
       map: this.selectedMap,
       zombies: this.selectedZombies === 'on',
       enemyType: this.selectedEnemyType,
-      runMode: this.selectedRunMode,
+      runMode: 'growth-only',
     });
   }
 }

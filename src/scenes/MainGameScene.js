@@ -2,7 +2,6 @@ import { drawNightBackground } from '../utils.js';
 
 const WORLD_WIDTH = 1280;
 const WORLD_HEIGHT = 720;
-const SAVE_PREFIX = 'cat_game_save_';
 
 const CHARACTER_SKINS = {
   orange: { idle: 'kittenIdle', run: 'kittenRun', eat: 'kittenEat' },
@@ -101,7 +100,7 @@ export class MainScene extends Phaser.Scene {
     this.zombiesEnabled = false;
     this.backgroundElements = [];
     this.audioCtx = null;
-    this.runMode = 'new';
+    this.runMode = 'growth-only';
     this.loadedState = null;
     this.autosaveEvent = null;
     this.lastMoveDir = 1;
@@ -127,6 +126,8 @@ export class MainScene extends Phaser.Scene {
     this.pendingBonusFlyovers = 0;
     this.musicEvent = null;
     this.musicStep = 0;
+    this.jetpackPack = null;
+    this.jetpackFlames = null;
   }
 
   init(data) {
@@ -136,24 +137,11 @@ export class MainScene extends Phaser.Scene {
     this.currentMapKey = data.map ?? 'city';
     this.currentEnemyType = data.enemyType ?? (data.zombies ? 'zombies' : 'off');
     this.zombiesEnabled = !!data.zombies;
-    this.runMode = data.runMode ?? 'new';
-    this.loadedState = this.runMode === 'continue' ? this.loadCharacterSave(this.currentCharacterKey) : null;
-
-    if (this.runMode === 'continue' && this.loadedState) {
-      this.currentModeKey = this.loadedState.mode ?? this.currentModeKey;
-      this.currentThemeKey = this.loadedState.theme ?? this.currentThemeKey;
-      this.currentMapKey = this.loadedState.map ?? this.currentMapKey;
-      this.currentEnemyType = this.loadedState.enemyType ?? this.currentEnemyType;
-      this.zombiesEnabled = !!this.loadedState.zombies;
-      this.foodPoints = this.loadedState.foodPoints ?? 0;
-      this.foodCaught = this.loadedState.foodCaught ?? 0;
-      this.sizeMultiplier = this.loadedState.sizeMultiplier ?? 1;
-    } else if (this.runMode === 'new') {
-      this.clearCharacterSave(this.currentCharacterKey);
-      this.foodPoints = 0;
-      this.foodCaught = 0;
-      this.sizeMultiplier = 1;
-    }
+    this.runMode = 'growth-only';
+    this.loadedState = null;
+    this.foodPoints = 0;
+    this.foodCaught = 0;
+    this.sizeMultiplier = 1;
 
     // Keep each cat's growth persistent even when starting a new session.
     const growthState = this.loadGrowthState(this.currentCharacterKey);
@@ -237,10 +225,9 @@ export class MainScene extends Phaser.Scene {
     this.heliShadow = this.add.ellipse(this.chefHeli.x, this.getGroundSurfaceY(), 110, 26, 0x000000, 0.18).setDepth(4);
     this.rocketShadow = this.add.ellipse(this.pizzaPlane.x, this.getGroundSurfaceY(), 88, 20, 0x000000, 0.16).setDepth(4).setVisible(false);
     this.createAstronautHelmet();
+    this.createJetpackVisuals();
 
-    if (this.loadedState) {
-      this.kitten.setScale(this.sizeMultiplier);
-    }
+    this.kitten.setScale(this.sizeMultiplier);
     this.syncKittenBodyToFeet();
 
     this.schedulePizzaDrops();
@@ -276,15 +263,32 @@ export class MainScene extends Phaser.Scene {
     this.backgroundElements = [];
 
     if (mapKey === 'city') {
-      // Reuse the title-screen city visual language for city map.
-      this.bgSky.setVisible(false);
-      this.bgGround.setVisible(false);
-      const cityBackdrop = drawNightBackground(this, WORLD_WIDTH, WORLD_HEIGHT);
-      if (cityBackdrop?.setDepth) {
-        cityBackdrop.setDepth(0);
-      }
-      if (cityBackdrop) {
-        this.backgroundElements.push(cityBackdrop);
+      const cityNight = this.currentThemeKey === 'night';
+      if (cityNight) {
+        // Reuse the title-screen city visual language for city-night map.
+        this.bgSky.setVisible(false);
+        this.bgGround.setVisible(false);
+        const cityBackdrop = drawNightBackground(this, WORLD_WIDTH, WORLD_HEIGHT);
+        if (cityBackdrop?.setDepth) {
+          cityBackdrop.setDepth(0);
+        }
+        if (cityBackdrop) {
+          this.backgroundElements.push(cityBackdrop);
+        }
+      } else {
+        this.bgSky.setVisible(true);
+        this.bgGround.setVisible(true);
+        this.bgSky.setFillStyle(0x95d5ff, 1);
+        this.bgGround.setFillStyle(0x6d7686, 1);
+        const sun = this.add.circle(1030, 86, 36, 0xffed9e, 0.92).setDepth(2);
+        this.backgroundElements.push(sun);
+
+        for (let i = 0; i < 11; i += 1) {
+          const x = 54 + i * 122;
+          const h = 90 + (i % 4) * 26;
+          const building = this.add.rectangle(x, WORLD_HEIGHT - 170 - h * 0.5, 78, h, 0x7f8ea4, 0.95).setDepth(2);
+          this.backgroundElements.push(building);
+        }
       }
 
       const skylineBaseY = Math.floor(WORLD_HEIGHT * 0.75);
@@ -1184,39 +1188,12 @@ export class MainScene extends Phaser.Scene {
     osc.stop(now + 0.1);
   }
 
-  getSaveKey(characterKey) {
-    return `${SAVE_PREFIX}${characterKey}`;
-  }
-
   getGrowthKey(characterKey) {
     return `${GROWTH_SAVE_PREFIX}${characterKey}`;
   }
 
-  loadCharacterSave(characterKey) {
-    try {
-      const raw = localStorage.getItem(this.getSaveKey(characterKey));
-      return raw ? JSON.parse(raw) : null;
-    } catch (_err) {
-      return null;
-    }
-  }
-
   saveCharacterState() {
-    const payload = {
-      character: this.currentCharacterKey,
-      mode: this.currentModeKey,
-      theme: this.currentThemeKey,
-      map: this.currentMapKey,
-      zombies: this.zombiesEnabled,
-      enemyType: this.currentEnemyType,
-      foodPoints: this.foodPoints,
-      foodCaught: this.foodCaught,
-      sizeMultiplier: this.sizeMultiplier,
-      updatedAt: Date.now(),
-    };
-
     try {
-      localStorage.setItem(this.getSaveKey(this.currentCharacterKey), JSON.stringify(payload));
       this.saveGrowthState();
     } catch (_err) {
       // ignore quota/storage issues in prototype
@@ -1243,14 +1220,6 @@ export class MainScene extends Phaser.Scene {
       localStorage.setItem(this.getGrowthKey(this.currentCharacterKey), JSON.stringify(payload));
     } catch (_err) {
       // ignore storage issues
-    }
-  }
-
-  clearCharacterSave(characterKey) {
-    try {
-      localStorage.removeItem(this.getSaveKey(characterKey));
-    } catch (_err) {
-      // ignore storage availability issues
     }
   }
 
@@ -1339,6 +1308,11 @@ export class MainScene extends Phaser.Scene {
     this.helmetGraphics = this.add.graphics().setDepth(9);
   }
 
+  createJetpackVisuals() {
+    this.jetpackPack = this.add.graphics().setDepth(10);
+    this.jetpackFlames = this.add.graphics().setDepth(9);
+  }
+
   syncKittenBodyToFeet() {
     if (!this.kitten || !this.kitten.body) {
       return;
@@ -1388,6 +1362,51 @@ export class MainScene extends Phaser.Scene {
     this.helmetGraphics.strokeEllipse(x, y, rX * 2.1, rY * 2.1);
     this.helmetGraphics.fillStyle(0xeaf6ff, 0.35);
     this.helmetGraphics.fillEllipse(x - 4 * this.sizeMultiplier, y - 4 * this.sizeMultiplier, 5 * this.sizeMultiplier, 3 * this.sizeMultiplier);
+  }
+
+  drawJetpackVisual(active) {
+    if (!this.jetpackPack || !this.jetpackFlames || !this.kitten || this.currentMapKey !== 'moon') {
+      if (this.jetpackPack) {
+        this.jetpackPack.clear();
+      }
+      if (this.jetpackFlames) {
+        this.jetpackFlames.clear();
+      }
+      return;
+    }
+
+    const dir = this.facingDir || 1;
+    const scale = this.sizeMultiplier;
+    const packX = this.kitten.x - dir * 8 * scale;
+    const packY = this.kitten.y - 16 * scale;
+    const packW = 10 * scale;
+    const packH = 14 * scale;
+
+    this.jetpackPack.clear();
+    this.jetpackPack.fillStyle(0x5d6573, 0.96);
+    this.jetpackPack.fillRoundedRect(packX - packW * 0.5, packY - packH * 0.5, packW, packH, 2 * scale);
+    this.jetpackPack.fillStyle(0x939db0, 1);
+    this.jetpackPack.fillRect(packX - 2 * scale, packY - 3 * scale, 4 * scale, 5 * scale);
+    this.jetpackPack.fillStyle(0x2d3340, 0.9);
+    this.jetpackPack.fillRect(packX - (dir < 0 ? 1.5 : 4.5) * scale, packY - 4 * scale, 3 * scale, 8 * scale);
+
+    this.jetpackFlames.clear();
+    if (!active) {
+      return;
+    }
+
+    const flicker = 0.75 + Math.sin(this.time.now * 0.03) * 0.25;
+    const flameLen = 10 * scale * flicker;
+    const leftNozzleX = packX - 2 * scale;
+    const rightNozzleX = packX + 2 * scale;
+    const nozzleY = packY + 7 * scale;
+
+    this.jetpackFlames.fillStyle(0xffb347, 0.95);
+    this.jetpackFlames.fillTriangle(leftNozzleX - 1.5 * scale, nozzleY, leftNozzleX + 1.5 * scale, nozzleY, leftNozzleX, nozzleY + flameLen);
+    this.jetpackFlames.fillTriangle(rightNozzleX - 1.5 * scale, nozzleY, rightNozzleX + 1.5 * scale, nozzleY, rightNozzleX, nozzleY + flameLen);
+    this.jetpackFlames.fillStyle(0xfff0be, 0.85);
+    this.jetpackFlames.fillTriangle(leftNozzleX - scale, nozzleY + scale, leftNozzleX + scale, nozzleY + scale, leftNozzleX, nozzleY + flameLen * 0.65);
+    this.jetpackFlames.fillTriangle(rightNozzleX - scale, nozzleY + scale, rightNozzleX + scale, nozzleY + scale, rightNozzleX, nozzleY + flameLen * 0.65);
   }
 
   burnVampireToAsh(enemy) {
@@ -1515,7 +1534,9 @@ export class MainScene extends Phaser.Scene {
       this.updateHud();
     }
 
-    if (this.currentMapKey === 'moon' && this.flashToggleKey.isDown && this.jetpackFuel > 0) {
+    const jetpackActive = this.currentMapKey === 'moon' && this.flashToggleKey.isDown && this.jetpackFuel > 0;
+
+    if (jetpackActive) {
       this.jetpackFuel = Math.max(0, this.jetpackFuel - (this.jetpackFuelDrainPerSec * delta) / 1000);
       this.updateHud();
     }
@@ -1539,6 +1560,7 @@ export class MainScene extends Phaser.Scene {
     this.updateFlashlightPosition();
     this.updateZombieLightEffect(delta);
     this.updateShadows();
+    this.drawJetpackVisual(jetpackActive);
     this.updateAstronautHelmet();
   }
 
