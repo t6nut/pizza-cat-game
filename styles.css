@@ -121,11 +121,11 @@ canvas {
 }
 
 .game-only-control {
-  display: none;
+  display: none !important;
 }
 
 body.game-ui-active .game-only-control {
-  display: flex;
+  display: flex !important;
 }
 
 .ctrl-btn {

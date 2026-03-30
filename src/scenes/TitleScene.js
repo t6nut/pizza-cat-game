@@ -337,9 +337,10 @@ export class TitleScene extends Phaser.Scene {
 
   createOptionsPanel() {
     const panelCX = W / 2;    // 640
-    const panelY  = 548;
+    const panelY  = 536;
     const panelW  = 1000;
-    const panelH  = 250;
+    const panelH  = 264;
+    const isMobileMenu = typeof window !== 'undefined' && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
     const panel = this.add.rectangle(panelCX, panelY, panelW, panelH, 0x0a142d, 0.9);
     panel.setStrokeStyle(3, 0x9bc4ff, 0.6);
@@ -349,9 +350,7 @@ export class TitleScene extends Phaser.Scene {
       ...TEXT_STYLE, fontSize: '15px', color: '#cde1ff', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(17);
 
-    // --- Row 1: Character ---
-    lbl(panelCX, panelY - 95, 'Character');
-    this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 67, (value) => {
+    const applyCharacterSelection = (value) => {
       this.selectedCharacter = value;
       if (this.charPreviewSprite) {
         this.charPreviewSprite.setTexture(CHARACTER_OPTIONS[value].idle);
@@ -363,42 +362,84 @@ export class TitleScene extends Phaser.Scene {
         }
       }
       this.refreshSelectedCatSize();
-    }, panelCX);
+    };
 
-    // --- Row 2: Theme (left) + Map (right) ---
-    lbl(panelCX - 320, panelY - 18, 'Theme');
-    lbl(panelCX + 170, panelY - 18, 'Map');
-    this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 10, (value) => {
-      if (this.selectedMap === 'moon' && value === 'day') {
-        this.selectOption('theme', 'night');
-        return;
-      }
-      this.selectedTheme = value;
-      this.updateMenuBackdrop();
-    }, panelCX - 320);
-    this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 10, (value) => {
-      this.selectedMap = value;
-      this.updateThemeAvailabilityForMap(value);
-      if (value === 'moon' && this.selectedTheme !== 'night') {
-        this.selectOption('theme', 'night');
-        return;
-      }
-      this.updateMenuBackdrop();
-    }, panelCX + 170);
+    if (isMobileMenu) {
+      // Mobile: character row sits beside the preview card to free panel space below.
+      lbl(870, 266, 'Character');
+      this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, 302, applyCharacterSelection, 870, 130, 120);
 
-    // --- Row 3: Enemies ---
-    lbl(panelCX, panelY + 35, 'Enemies');
-    this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 63, (value) => {
-      this.selectedEnemyType = value;
-      this.selectedZombies = value === 'off' ? 'off' : 'on';
-    }, panelCX, 140, 125);
+      // Theme moved to top-left; enemies takes the old middle-row slot.
+      lbl(panelCX - 328, panelY - 96, 'Theme');
+      this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY - 66, (value) => {
+        if (this.selectedMap === 'moon' && value === 'day') {
+          this.selectOption('theme', 'night');
+          return;
+        }
+        this.selectedTheme = value;
+        this.updateMenuBackdrop();
+      }, panelCX - 328, 164, 170);
 
-    // --- Start button ---
-    this.startButton = this.add.rectangle(panelCX, panelY + 118, 290, 42, 0x4d596b, 1)
-      .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
-    this.startText = this.add.text(panelCX, panelY + 118, 'Select All Options', {
-      ...TEXT_STYLE, fontSize: '20px', color: '#c6d0dd', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(18);
+      lbl(panelCX, panelY - 16, 'Enemies');
+      this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 16, (value) => {
+        this.selectedEnemyType = value;
+        this.selectedZombies = value === 'off' ? 'off' : 'on';
+      }, panelCX, 200, 208);
+
+      lbl(panelCX, panelY + 66, 'Map');
+      this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 96, (value) => {
+        this.selectedMap = value;
+        this.updateThemeAvailabilityForMap(value);
+        if (value === 'moon' && this.selectedTheme !== 'night') {
+          this.selectOption('theme', 'night');
+          return;
+        }
+        this.updateMenuBackdrop();
+      }, panelCX, 152, 148);
+
+      this.startButton = this.add.rectangle(panelCX, panelY + 140, 336, 52, 0x4d596b, 1)
+        .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
+      this.startText = this.add.text(panelCX, panelY + 140, 'Select All Options', {
+        ...TEXT_STYLE, fontSize: '24px', color: '#c6d0dd', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(18);
+    } else {
+      // Desktop/tablet layout.
+      lbl(panelCX, panelY - 95, 'Character');
+      this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 67, applyCharacterSelection, panelCX);
+
+      lbl(panelCX - 320, panelY - 18, 'Theme');
+      lbl(panelCX + 170, panelY - 18, 'Map');
+      this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 10, (value) => {
+        if (this.selectedMap === 'moon' && value === 'day') {
+          this.selectOption('theme', 'night');
+          return;
+        }
+        this.selectedTheme = value;
+        this.updateMenuBackdrop();
+      }, panelCX - 320);
+      this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 10, (value) => {
+        this.selectedMap = value;
+        this.updateThemeAvailabilityForMap(value);
+        if (value === 'moon' && this.selectedTheme !== 'night') {
+          this.selectOption('theme', 'night');
+          return;
+        }
+        this.updateMenuBackdrop();
+      }, panelCX + 170);
+
+      lbl(panelCX, panelY + 35, 'Enemies');
+      this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 63, (value) => {
+        this.selectedEnemyType = value;
+        this.selectedZombies = value === 'off' ? 'off' : 'on';
+      }, panelCX, 140, 125);
+
+      this.startButton = this.add.rectangle(panelCX, panelY + 118, 290, 42, 0x4d596b, 1)
+        .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
+      this.startText = this.add.text(panelCX, panelY + 118, 'Select All Options', {
+        ...TEXT_STYLE, fontSize: '20px', color: '#c6d0dd', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(18);
+    }
+
     this.startButton.setInteractive({ useHandCursor: true });
     this.startButton.on('pointerdown', () => { if (this.canStart()) this._start(); });
 
