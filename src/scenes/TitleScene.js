@@ -12,9 +12,9 @@ const CHARACTER_OPTIONS = {
 };
 
 const MODE_OPTIONS = {
-  easy:   { label: 'Easy'   },
-  medium: { label: 'Medium' },
-  hard:   { label: 'Hard'   },
+  easy:   { label: 'Easy'          },
+  medium: { label: 'Medium (soon)' },
+  hard:   { label: 'Hard (soon)'   },
 };
 
 const THEME_OPTIONS = {
@@ -356,6 +356,16 @@ export class TitleScene extends Phaser.Scene {
     this.createOptionRow('mode', ['easy', 'medium', 'hard'], MODE_OPTIONS, panelY - 35, (value) => {
       this.selectedMode = value;
     }, panelCX);
+    // Disable medium and hard — not yet available
+    for (const disabledKey of ['medium', 'hard']) {
+      const entry = (this.optionButtons.mode || []).find(e => e.key === disabledKey);
+      if (entry) {
+        entry.box.disableInteractive();
+        entry.box.setFillStyle(0x1e2535);
+        entry.box.alpha = 0.45;
+        entry.text.alpha = 0.45;
+      }
+    }
 
     // --- Row 3: Theme (left) + Map (right) ---
     lbl(panelCX - 320, panelY, 'Theme');
