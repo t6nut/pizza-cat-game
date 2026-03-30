@@ -1,4 +1,5 @@
 import { TEXT_STYLE } from '../utils.js';
+import { clampCatSize } from '../systems/catGrowth.js';
 
 const W = 1280;
 const H = 720;
@@ -571,7 +572,7 @@ export class TitleScene extends Phaser.Scene {
     try {
       const raw = localStorage.getItem(this.getGrowthKey(characterKey));
       const parsed = raw ? JSON.parse(raw) : null;
-      return parsed?.sizeMultiplier ? Math.max(1, parsed.sizeMultiplier) : 1;
+      return parsed?.sizeMultiplier ? clampCatSize(parsed.sizeMultiplier) : 1;
     } catch (_err) {
       return 1;
     }
