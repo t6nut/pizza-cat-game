@@ -23,7 +23,7 @@ export function handleZombieEatFood(scene, objA, objB) {
   food.disableBody(true, true);
   scene.playEnemyEatSound(value);
 
-  zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.08 * value, 1, 2.6);
+  zombie.growthScale = Math.max(1, (zombie.growthScale || 1) + 0.08 * value);
   zombie.setScale(zombie.growthScale);
   // Speed intentionally unchanged when enemy grows from eating
   scene.syncEnemyBody(zombie);
@@ -54,12 +54,14 @@ export function handleZombieCollision(scene, kitten, zombie) {
     }
     zombie.disableBody(true, true);
     kitten.setVelocityY(-220);
-    scene.showCatchPopup(kitten.x, kitten.y - 38, 'CHOMP!');
+    const enemyScale = Math.max(1, zombie.growthScale || 1);
+    const stompBonus = 2 * enemyScale;
+    scene.showCatchPopup(kitten.x, kitten.y - 38, `CHOMP! +${stompBonus.toFixed(1)}`);
     scene.playZombieStompSound();
-    scene.playEatSound(2);
-    scene.foodPoints += 2;
+    scene.playEatSound(stompBonus);
+    scene.foodPoints += stompBonus;
     scene.foodCaught += 1;
-    scene.sizeMultiplier = applyGrowthDelta(scene.sizeMultiplier, 0.2);
+    scene.sizeMultiplier = applyGrowthDelta(scene.sizeMultiplier, 0.2 * enemyScale);
     scene.kitten.setScale(scene.sizeMultiplier);
     scene.syncKittenBodyToFeet();
     scene.eatCooldown = 160;
@@ -82,7 +84,7 @@ export function handleZombieCollision(scene, kitten, zombie) {
   scene.updateHud();
   scene.showCatchPopup(kitten.x, kitten.y - 45, 'OUCH!');
 
-  zombie.growthScale = Phaser.Math.Clamp((zombie.growthScale || 1) + 0.12, 1, 2.6);
+  zombie.growthScale = Math.max(1, (zombie.growthScale || 1) + 0.12);
   zombie.setScale(zombie.growthScale);
   scene.syncEnemyBody(zombie);
 
@@ -233,8 +235,9 @@ function _drawVampireHpBar(scene, zombie, isActiveLit) {
 
 export function updateZombieGroundingAndAccessories(scene) {
   const zombies = scene.zombieGroup.getChildren();
+  const pizzas = scene.pizzaGroup ? scene.pizzaGroup.getChildren() : [];
   const dayMode = scene.currentThemeKey === 'day';
-    const groundTop = scene.getGroundSurfaceY();
+  const groundTop = scene.getGroundSurfaceY();
 
   for (let i = 0; i < zombies.length; i += 1) {
     const zombie = zombies[i];
@@ -246,9 +249,53 @@ export function updateZombieGroundingAndAccessories(scene) {
       continue;
     }
 
-    // Keep enemy grounding body-driven to avoid sprite/body divergence.
-      // Keep enemies planted using the same sync path used elsewhere.
-      scene.syncEnemyBody(zombie);
+    // Keep enemies planted using the same sync path used elsewhere.
+    scene.syncEnemyBody(zombie);
+
+    // Retarget every frame: nearest fallen pizza first, otherwise chase the cat.
+    if (!zombie.litStopped) {
+      let targetX = scene.kitten ? scene.kitten.x : zombie.x;
+      let nearestDist = Number.POSITIVE_INFINITY;
+
+      for (let j = 0; j < pizzas.length; j += 1) {
+        const food = pizzas[j];
+        if (!food?.active || food.caught || !food.onGround) {
+          continue;
+        }
+        const dist = Math.abs(food.x - zombie.x);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          targetX = food.x;
+        }
+      }
+
+      const dx = targetX - zombie.x;
+      if (Math.abs(dx) < 4) {
+        zombie.setVelocityX(0);
+      } else {
+        zombie.moveDir = dx > 0 ? 1 : -1;
+        zombie.setFlipX(zombie.moveDir < 0);
+        zombie.setVelocityX(zombie.moveDir * zombie.moveSpeed);
+      }
+
+      const speedAbs = Math.abs(zombie.body.velocity.x);
+      if (speedAbs > 10) {
+        zombie.walkAnimTime = (zombie.walkAnimTime || 0) + scene.game.loop.delta;
+        if (zombie.walkAnimTime >= 160) {
+          zombie.walkAnimTime = 0;
+          zombie.walkAnimFrame = zombie.walkAnimFrame === 0 ? 1 : 0;
+        }
+      } else {
+        zombie.walkAnimFrame = 0;
+      }
+
+      const frameSuffix = zombie.walkAnimFrame === 0 ? '1' : '2';
+      const baseName = zombie.enemyType === 'vampire' ? 'vampireWalker' : 'zombieWalker';
+      const desiredTexture = `${baseName}${frameSuffix}`;
+      if (zombie.texture?.key !== desiredTexture) {
+        zombie.setTexture(desiredTexture);
+      }
+    }
 
     if (dayMode && zombie.enemyType === 'vampire') {
       if (!zombie.umbrella || !zombie.umbrella.active) {
@@ -257,7 +304,7 @@ export function updateZombieGroundingAndAccessories(scene) {
       const umb = zombie.umbrella;
       const x = zombie.body.center.x;
       const y = groundTop - 18 * (zombie.growthScale || 1);
-      const scale = Phaser.Math.Clamp(zombie.growthScale || 1, 1, 2.6);
+      const scale = Math.max(1, zombie.growthScale || 1);
       umb.clear();
       umb.fillStyle(0x1f1f1f, 0.95);
       umb.fillEllipse(x, y, 20 * scale, 8 * scale);
@@ -271,49 +318,71 @@ export function updateZombieGroundingAndAccessories(scene) {
 }
 
 export function ensureZombieTexture(scene) {
-  if (scene.textures.exists('zombieWalker')) {
+  if (scene.textures.exists('zombieWalker1') && scene.textures.exists('zombieWalker2')) {
     return;
   }
+  const drawZombie = (g, leftLegY, rightLegY) => {
+    g.clear();
+    g.fillStyle(0x4f7f47, 1);
+    g.fillRect(6, 8, 20, 14);
+    g.fillStyle(0x35592f, 1);
+    g.fillRect(8, 4, 16, 4);
+    g.fillStyle(0xb4ddb4, 1);
+    g.fillRect(10, 12, 4, 4);
+    g.fillRect(18, 12, 4, 4);
+    g.fillStyle(0x1f2f1f, 1);
+    g.fillRect(11, 13, 1, 1);
+    g.fillRect(19, 13, 1, 1);
+    g.fillStyle(0x2b4b25, 1);
+    g.fillRect(7, leftLegY, 6, 2);
+    g.fillRect(19, rightLegY, 6, 2);
+  };
+
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(0x4f7f47, 1);
-  g.fillRect(6, 8, 20, 14);
-  g.fillStyle(0x35592f, 1);
-  g.fillRect(8, 4, 16, 4);
-  g.fillStyle(0xb4ddb4, 1);
-  g.fillRect(10, 12, 4, 4);
-  g.fillRect(18, 12, 4, 4);
-  g.fillStyle(0x1f2f1f, 1);
-  g.fillRect(11, 13, 1, 1);
-  g.fillRect(19, 13, 1, 1);
-  g.fillStyle(0x2b4b25, 1);
-  g.fillRect(7, 22, 6, 2);
-  g.fillRect(19, 22, 6, 2);
-  g.generateTexture('zombieWalker', 32, 26);
+  drawZombie(g, 22, 20);
+  g.generateTexture('zombieWalker1', 32, 26);
+  drawZombie(g, 20, 22);
+  g.generateTexture('zombieWalker2', 32, 26);
+  if (!scene.textures.exists('zombieWalker')) {
+    drawZombie(g, 22, 20);
+    g.generateTexture('zombieWalker', 32, 26);
+  }
   g.destroy();
 }
 
 export function ensureVampireTexture(scene) {
-  if (scene.textures.exists('vampireWalker')) {
+  if (scene.textures.exists('vampireWalker1') && scene.textures.exists('vampireWalker2')) {
     return;
   }
+  const drawVampire = (g, leftLegY, rightLegY) => {
+    g.clear();
+    g.fillStyle(0x726093, 1);
+    g.fillRect(6, 8, 20, 14);
+    g.fillStyle(0x4f396e, 1);
+    g.fillRect(8, 4, 16, 4);
+    g.fillStyle(0xf1d7d7, 1);
+    g.fillRect(10, 12, 4, 4);
+    g.fillRect(18, 12, 4, 4);
+    g.fillStyle(0x220f2e, 1);
+    g.fillRect(11, 13, 1, 1);
+    g.fillRect(19, 13, 1, 1);
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(13, 16, 1, 2);
+    g.fillRect(18, 16, 1, 2);
+    g.fillStyle(0x3f284f, 1);
+    g.fillRect(7, leftLegY, 6, 2);
+    g.fillRect(19, rightLegY, 6, 2);
+  };
+
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(0x726093, 1);
-  g.fillRect(6, 8, 20, 14);
-  g.fillStyle(0x4f396e, 1);
-  g.fillRect(8, 4, 16, 4);
-  g.fillStyle(0xf1d7d7, 1);
-  g.fillRect(10, 12, 4, 4);
-  g.fillRect(18, 12, 4, 4);
-  g.fillStyle(0x220f2e, 1);
-  g.fillRect(11, 13, 1, 1);
-  g.fillRect(19, 13, 1, 1);
-  g.fillStyle(0xffffff, 1);
-  g.fillRect(13, 16, 1, 2);
-  g.fillRect(18, 16, 1, 2);
-  g.fillStyle(0x3f284f, 1);
-  g.fillRect(7, 22, 6, 2);
-  g.fillRect(19, 22, 6, 2);
-  g.generateTexture('vampireWalker', 32, 26);
+  drawVampire(g, 22, 20);
+  g.generateTexture('vampireWalker1', 32, 26);
+  drawVampire(g, 20, 22);
+  g.generateTexture('vampireWalker2', 32, 26);
+  if (!scene.textures.exists('vampireWalker')) {
+    drawVampire(g, 22, 20);
+    g.generateTexture('vampireWalker', 32, 26);
+  }
   g.destroy();
 }
 

@@ -87,7 +87,7 @@ export function updateShadows(scene) {
       enemy.shadow.setVisible(enemy.active);
       enemy.shadow.x = enemy.x;
       enemy.shadow.y = getGroundSurfaceY(scene) + 1;
-      enemy.shadow.width = 36 * Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.2);
+      enemy.shadow.width = 36 * Math.max(1, enemy.growthScale || 1);
     }
   }
 

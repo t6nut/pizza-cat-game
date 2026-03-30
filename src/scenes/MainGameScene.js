@@ -622,10 +622,10 @@ export class MainScene extends Phaser.Scene {
       this.ovenFlameTime += 0.13;
       const fl = this.ovenFlameGfx;
       fl.clear();
-      // SVG viewBox 190x140 → sprite origin maps to SVG point (95, 70)
-      // Oven shortened vertically: flame center now at SVG ~(79, 89) → scale 0.7 offset.
+      // SVG viewBox 190x140 -> sprite origin maps to SVG point (95, 70)
+      // Oven group is lowered in the sprite, so keep the flame overlay aligned to the door.
       const fx = this.chefHeli.x + (79 - 95) * 0.7; // ≈ -11
-      const fy = this.chefHeli.y + (89 - 70) * 0.7; // ≈ +13
+      const fy = this.chefHeli.y + (97 - 70) * 0.7; // ≈ +19
       const f1 = 0.72 + Math.sin(this.ovenFlameTime * 3.1) * 0.14;
       const f2 = 0.72 + Math.sin(this.ovenFlameTime * 7.5 + 1.2) * 0.16;
       fl.fillStyle(0xff4400, f1 * 0.9);
@@ -647,9 +647,9 @@ export class MainScene extends Phaser.Scene {
         const swing = Math.sin(p * Math.PI);
 
         // Approximate shoulder/hand anchors from chef coordinates in the oven SVG.
-        const shoulderX = this.chefHeli.x + (170 - 95) * 0.7;
+        const shoulderX = this.chefHeli.x + (164 - 95) * 0.7;
         const shoulderY = this.chefHeli.y + (117 - 70) * 0.7;
-        const handX = this.chefHeli.x + (177 - 95) * 0.7 + swing * 8;
+        const handX = this.chefHeli.x + (171 - 95) * 0.7 + swing * 8;
         const handY = this.chefHeli.y + (108 - 70) * 0.7 - swing * 11;
 
         g.lineStyle(5, 0xf6f6f6, 1);

@@ -21,7 +21,7 @@ export function spawnZombie(scene, worldWidth) {
   const startX = fromLeft ? 10 : worldWidth - 10;
   const speed = isVampire ? mode.zombieSpeed + 12 : mode.zombieSpeed;
   const velocityX = fromLeft ? speed : -speed;
-  const textureKey = isVampire ? 'vampireWalker' : 'zombieWalker';
+  const textureKey = isVampire ? 'vampireWalker1' : 'zombieWalker1';
 
   const activeEnemies = scene.zombieGroup.getChildren();
   for (let i = 0; i < activeEnemies.length; i += 1) {
@@ -68,5 +68,7 @@ export function spawnZombie(scene, worldWidth) {
   zombie.vampireLightMs = 0;
   zombie.laserBurnMs = 0;
   zombie.umbrella = null;
+  zombie.walkAnimTime = 0;
+  zombie.walkAnimFrame = 0;
   scene.syncEnemyBody(zombie);
 }
