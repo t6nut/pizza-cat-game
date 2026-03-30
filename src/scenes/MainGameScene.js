@@ -1,3 +1,5 @@
+import { computeBodyFromDisplay } from '../systems/hitboxUtils.js';
+
 const WORLD_WIDTH = 1280;
 const WORLD_HEIGHT = 720;
 
@@ -1102,16 +1104,16 @@ export class MainScene extends Phaser.Scene {
       this.eatTween.stop();
       this.eatTween = null;
     }
+    // Keep eat feedback visual-only without changing transform to avoid sprite/body desync artifacts.
     this.kitten.setScale(this.sizeMultiplier);
     this.eatTween = this.tweens.add({
       targets: this.kitten,
-      scaleX: this.sizeMultiplier * 1.08,
-      scaleY: this.sizeMultiplier * 0.92,
+      alpha: 0.82,
       yoyo: true,
-      duration: 90,
+      duration: 70,
       ease: 'Sine.easeInOut',
       onComplete: () => {
-        this.kitten.setScale(this.sizeMultiplier);
+        this.kitten.setAlpha(1);
         this.eatTween = null;
       },
     });
@@ -1411,22 +1413,20 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    const displayW = Math.max(1, this.kitten.displayWidth);
-    const displayH = Math.max(1, this.kitten.displayHeight);
-    // Keep hitbox proportional to rendered size so it remains valid at large growth values.
-    const bodyW = Math.max(14, Math.round(displayW * 0.5));
-    const bodyH = Math.max(10, Math.round(displayH * 0.5));
-    const spriteBottomPad = displayH * (2 / 24);
-    const offsetX = Math.max(0, (displayW - bodyW) * 0.5);
-    const offsetY = Math.max(0, displayH - bodyH - spriteBottomPad);
-    body.setSize(bodyW, bodyH, false);
-    body.setOffset(offsetX, offsetY);
+    const hitbox = computeBodyFromDisplay(this.kitten.displayWidth, this.kitten.displayHeight, {
+      widthRatio: 0.5,
+      heightRatio: 0.5,
+      minWidth: 14,
+      minHeight: 10,
+      bottomPadRatio: 2 / 24,
+    });
+    body.setSize(hitbox.bodyW, hitbox.bodyH, false);
+    body.setOffset(hitbox.offsetX, hitbox.offsetY);
 
     const groundTop = this.getGroundSurfaceY();
     const nearGround = ((body.blocked.down || body.touching.down) || body.bottom >= groundTop - 2) && body.velocity.y >= 0;
     if (nearGround) {
       body.y = groundTop - body.height;
-      this.kitten.y = groundTop;
       body.velocity.y = 0;
     }
   }
@@ -1435,15 +1435,15 @@ export class MainScene extends Phaser.Scene {
     if (!enemy || !enemy.body) {
       return;
     }
-    const displayW = Math.max(1, enemy.displayWidth);
-    const displayH = Math.max(1, enemy.displayHeight);
-    const bodyW = Math.max(14, Math.round(displayW * 0.5));
-    const bodyH = Math.max(10, Math.round(displayH * 0.46));
-    const enemyBottomPad = displayH * (2 / 26);
-    const offsetX = Math.max(0, (displayW - bodyW) * 0.5);
-    const offsetY = Math.max(0, displayH - bodyH - enemyBottomPad);
-    enemy.body.setSize(bodyW, bodyH, false);
-    enemy.body.setOffset(offsetX, offsetY);
+    const hitbox = computeBodyFromDisplay(enemy.displayWidth, enemy.displayHeight, {
+      widthRatio: 0.5,
+      heightRatio: 0.46,
+      minWidth: 14,
+      minHeight: 10,
+      bottomPadRatio: 2 / 26,
+    });
+    enemy.body.setSize(hitbox.bodyW, hitbox.bodyH, false);
+    enemy.body.setOffset(hitbox.offsetX, hitbox.offsetY);
     const groundTop = this.getGroundSurfaceY();
     if (enemy.body.bottom >= groundTop - 24 || enemy.body.velocity.y >= 0) {
       enemy.body.y = groundTop - enemy.body.height;
