@@ -1377,13 +1377,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    const bodyW = CHARACTER_HITBOX.width;
-    const bodyH = CHARACTER_HITBOX.height;
-    // All cat SVGs are 32x24 with visual content ending at y=22 (2px transparent bottom padding).
-    // Subtracting 2 * scale shifts the hitbox up to the visual feet, preventing scale-dependent floating.
-    const SPRITE_BOTTOM_PAD = 2;
+    const scale = this.sizeMultiplier;
+    // Body scales with the cat to maintain proportional hitbox.
+    const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * scale), 14, 42);
+    const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * scale), 10, 32);
+    // Center the body within the scaled sprite.
     const offsetX = Math.max(0, (this.kitten.displayWidth - bodyW) * 0.5);
-    const offsetY = Math.max(0, this.kitten.displayHeight - bodyH - SPRITE_BOTTOM_PAD * this.sizeMultiplier);
+    const offsetY = Math.max(0, (this.kitten.displayHeight - bodyH) * 0.5);
     body.setSize(bodyW, bodyH, false);
     body.setOffset(offsetX, offsetY);
 
@@ -1391,6 +1391,8 @@ export class MainScene extends Phaser.Scene {
     const nearGround = (body.blocked.down || body.touching.down) && body.velocity.y >= 0;
     if (nearGround) {
       body.y = groundTop - body.height;
+      // Lock sprite's visual feet to ground (origin is at bottom center).
+      this.kitten.y = groundTop;
     }
   }
 
@@ -1401,10 +1403,9 @@ export class MainScene extends Phaser.Scene {
     const enemyScale = Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.6);
     const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * enemyScale), 14, 42);
     const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * enemyScale), 10, 32);
-    // Enemy sprites are 32x26 with visual content ending at y=24 (2px transparent bottom padding).
-    const SPRITE_BOTTOM_PAD = 2;
+    // Center the body within the scaled sprite.
     const offsetX = Math.max(0, (enemy.displayWidth - bodyW) * 0.5);
-    const offsetY = Math.max(0, enemy.displayHeight - bodyH - SPRITE_BOTTOM_PAD * enemyScale);
+    const offsetY = Math.max(0, (enemy.displayHeight - bodyH) * 0.5);
     enemy.body.setSize(bodyW, bodyH, false);
     enemy.body.setOffset(offsetX, offsetY);
     const groundTop = this.getGroundSurfaceY();
