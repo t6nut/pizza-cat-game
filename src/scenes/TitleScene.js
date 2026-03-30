@@ -11,12 +11,6 @@ const CHARACTER_OPTIONS = {
   pikatchu: { label: 'Pikatchu',    idle: 'pikatchuIdle'  },
 };
 
-const MODE_OPTIONS = {
-  easy:   { label: 'Easy'          },
-  medium: { label: 'Medium (soon)' },
-  hard:   { label: 'Hard (soon)'   },
-};
-
 const THEME_OPTIONS = {
   day:   { label: 'Day'   },
   night: { label: 'Night' },
@@ -42,7 +36,7 @@ export class TitleScene extends Phaser.Scene {
   constructor() {
     super('TitleScene');
     this.selectedCharacter = null;
-    this.selectedMode = null;
+    this.selectedMode = 'easy';
     this.selectedTheme = null;
     this.selectedMap = null;
     this.selectedZombies = null;
@@ -136,13 +130,6 @@ export class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(20);
 
-    this.add.text(W / 2, 200, '← → / A D move   ↑ / W jump   F light/laser   SPACE jetpack(moon)   ESC menu   G fullscreen', {
-      ...TEXT_STYLE,
-      fontSize: '14px',
-      color: '#88aadd',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(20);
-
     // Fullscreen button top-right
     const fsLabel = this.add.text(W - 16, 14, '[ G ] Fullscreen', {
       ...TEXT_STYLE,
@@ -211,7 +198,7 @@ export class TitleScene extends Phaser.Scene {
     // Pre-select last used options, falling back to defaults
     const savedPrefs = this._loadMenuPrefs();
     this.selectOption('character', savedPrefs.character || 'orange');
-    this.selectOption('mode',      savedPrefs.mode      || 'easy');
+    this.selectedMode = savedPrefs.mode || 'easy';
     this.selectOption('map',       savedPrefs.map       || 'city');
     this.selectOption('theme',     savedPrefs.theme     || 'day');
     this.selectOption('enemies',   savedPrefs.enemies   || 'off');
@@ -346,9 +333,9 @@ export class TitleScene extends Phaser.Scene {
 
   createOptionsPanel() {
     const panelCX = W / 2;    // 640
-    const panelY  = 575;
+    const panelY  = 548;
     const panelW  = 1000;
-    const panelH  = 278;
+    const panelH  = 224;
 
     const panel = this.add.rectangle(panelCX, panelY, panelW, panelH, 0x0a142d, 0.9);
     panel.setStrokeStyle(3, 0x9bc4ff, 0.6);
@@ -359,8 +346,8 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(17);
 
     // --- Row 1: Character ---
-    lbl(panelCX, panelY - 118, 'Character');
-    this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 90, (value) => {
+    lbl(panelCX, panelY - 95, 'Character');
+    this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 67, (value) => {
       this.selectedCharacter = value;
       if (this.charPreviewSprite) {
         this.charPreviewSprite.setTexture(CHARACTER_OPTIONS[value].idle);
@@ -374,26 +361,10 @@ export class TitleScene extends Phaser.Scene {
       this.refreshSelectedCatSize();
     }, panelCX);
 
-    // --- Row 2: Mode ---
-    lbl(panelCX, panelY - 63, 'Mode');
-    this.createOptionRow('mode', ['easy', 'medium', 'hard'], MODE_OPTIONS, panelY - 35, (value) => {
-      this.selectedMode = value;
-    }, panelCX);
-    // Disable medium and hard — not yet available
-    for (const disabledKey of ['medium', 'hard']) {
-      const entry = (this.optionButtons.mode || []).find(e => e.key === disabledKey);
-      if (entry) {
-        entry.box.disableInteractive();
-        entry.box.setFillStyle(0x1e2535);
-        entry.box.alpha = 0.45;
-        entry.text.alpha = 0.45;
-      }
-    }
-
-    // --- Row 3: Theme (left) + Map (right) ---
-    lbl(panelCX - 320, panelY - 6, 'Theme');
-    lbl(panelCX + 170, panelY - 6, 'Map');
-    this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 23, (value) => {
+    // --- Row 2: Theme (left) + Map (right) ---
+    lbl(panelCX - 320, panelY - 18, 'Theme');
+    lbl(panelCX + 170, panelY - 18, 'Map');
+    this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 10, (value) => {
       if (this.selectedMap === 'moon' && value === 'day') {
         this.selectOption('theme', 'night');
         return;
@@ -401,7 +372,7 @@ export class TitleScene extends Phaser.Scene {
       this.selectedTheme = value;
       this.updateMenuBackdrop();
     }, panelCX - 320);
-    this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 23, (value) => {
+    this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 10, (value) => {
       this.selectedMap = value;
       this.updateThemeAvailabilityForMap(value);
       if (value === 'moon' && this.selectedTheme !== 'night') {
@@ -411,17 +382,17 @@ export class TitleScene extends Phaser.Scene {
       this.updateMenuBackdrop();
     }, panelCX + 170);
 
-    // --- Row 4: Enemies ---
-    lbl(panelCX, panelY + 52, 'Enemies');
-    this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 80, (value) => {
+    // --- Row 3: Enemies ---
+    lbl(panelCX, panelY + 35, 'Enemies');
+    this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 63, (value) => {
       this.selectedEnemyType = value;
       this.selectedZombies = value === 'off' ? 'off' : 'on';
     }, panelCX, 140, 125);
 
     // --- Start button ---
-    this.startButton = this.add.rectangle(panelCX, panelY + 124, 290, 42, 0x4d596b, 1)
+    this.startButton = this.add.rectangle(panelCX, panelY + 93, 290, 42, 0x4d596b, 1)
       .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
-    this.startText = this.add.text(panelCX, panelY + 124, 'Select All Options', {
+    this.startText = this.add.text(panelCX, panelY + 93, 'Select All Options', {
       ...TEXT_STYLE, fontSize: '20px', color: '#c6d0dd', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(18);
     this.startButton.setInteractive({ useHandCursor: true });
