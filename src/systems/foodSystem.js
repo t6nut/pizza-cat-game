@@ -25,6 +25,18 @@ export function spawnSliceFromHelicopter(scene, worldWidth) {
   const variance = Phaser.Math.Clamp(34 + scene.foodCaught * 0.7, 34, 140);
   const x = Phaser.Math.Clamp(scene.chefHeli.x + Phaser.Math.Between(-variance, variance), 24, worldWidth - 24);
 
+  // Chef Mario toss animation — brief rotation wobble
+  if (scene.chefHeli && scene.currentMapKey !== 'moon') {
+    scene.tweens.add({
+      targets: scene.chefHeli,
+      angle: 10,
+      duration: 90,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onComplete: () => { if (scene.chefHeli) scene.chefHeli.angle = 0; },
+    });
+  }
+
   const food = scene.pizzaGroup.get(x, scene.chefHeli.y + 34, 'pizza');
   if (!food) {
     return;

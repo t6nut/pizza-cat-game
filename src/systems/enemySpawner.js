@@ -60,6 +60,7 @@ export function spawnZombie(scene, worldWidth) {
   }
   zombie.alive = true;
   zombie.growthScale = 1;
+  zombie.setScale(1);
   zombie.moveDir = fromLeft ? 1 : -1;
   zombie.moveSpeed = speed;
   zombie.litStopped = false;

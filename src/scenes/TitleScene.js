@@ -85,8 +85,8 @@ export class TitleScene extends Phaser.Scene {
     this.load.svg('pikatchuEat',  'assets/sprites/pikatchu_eat.svg',      { scale: 1 });
     this.load.svg('pizza',        'assets/sprites/pizza_slice.svg',       { scale: 1 });
     this.load.svg('pizzaWhole',   'assets/sprites/pizza_whole.svg',       { scale: 1 });
-    // Normal-map vehicles (helicopter & airplane)
-    this.load.svg('chefHeli',     'assets/sprites/chef_helicopter.svg',   { scale: 1 });
+    // Normal-map vehicles (pizza oven with chef & airplane)
+    this.load.svg('pizzaOven',    'assets/sprites/pizza_oven_with_chef.svg', { scale: 1 });
     this.load.svg('pizzaPlane',   'assets/sprites/pizza_plane.svg',       { scale: 1 });
     // Moon-map vehicles (UFO & rocketship)
     this.load.svg('ufoSprite',    'assets/sprites/ufo.svg',               { scale: 1 });
@@ -96,8 +96,8 @@ export class TitleScene extends Phaser.Scene {
   create() {
     this.createMenuBackdrop();
 
-    // Helicopter flies in from the left then hovers
-    this.heli = this.add.sprite(-150, 88, 'chefHeli');
+    // Chef oven flies in from the left then hovers
+    this.heli = this.add.sprite(-150, 88, 'pizzaOven');
     this.heli.setScale(2).setDepth(5);
     this.tweens.add({
       targets: this.heli,
@@ -116,7 +116,7 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(20);
 
     this.vehicleDescText = this.add.text(W / 2, 148,
-      'A helicopter and airplane are dropping pizza!', {
+      'Chef Mario in his stone oven is dropping pizza!', {
       ...TEXT_STYLE,
       fontSize: '17px',
       color: '#c8e0ff',
@@ -291,12 +291,12 @@ export class TitleScene extends Phaser.Scene {
     this.menuMoon.setVisible(isNight);
 
     if (this.heli) {
-      this.heli.setTexture(isMoon ? 'ufoSprite' : 'chefHeli');
+      this.heli.setTexture(isMoon ? 'ufoSprite' : 'pizzaOven');
     }
     if (this.vehicleDescText) {
       this.vehicleDescText.setText(isMoon
         ? 'A UFO and rocketship are dropping pizza!'
-        : 'A helicopter and airplane are dropping pizza!');
+        : 'Chef Mario in his stone oven is dropping pizza!');
     }
   }
 
@@ -338,7 +338,7 @@ export class TitleScene extends Phaser.Scene {
     const panelCX = W / 2;    // 640
     const panelY  = 575;
     const panelW  = 1000;
-    const panelH  = 262;
+    const panelH  = 278;
 
     const panel = this.add.rectangle(panelCX, panelY, panelW, panelH, 0x0a142d, 0.9);
     panel.setStrokeStyle(3, 0x9bc4ff, 0.6);
@@ -349,7 +349,7 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(17);
 
     // --- Row 1: Character ---
-    lbl(panelCX, panelY - 112, 'Character');
+    lbl(panelCX, panelY - 118, 'Character');
     this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, panelY - 90, (value) => {
       this.selectedCharacter = value;
       if (this.charPreviewSprite) {
@@ -365,7 +365,7 @@ export class TitleScene extends Phaser.Scene {
     }, panelCX);
 
     // --- Row 2: Mode ---
-    lbl(panelCX, panelY - 57, 'Mode');
+    lbl(panelCX, panelY - 63, 'Mode');
     this.createOptionRow('mode', ['easy', 'medium', 'hard'], MODE_OPTIONS, panelY - 35, (value) => {
       this.selectedMode = value;
     }, panelCX);
@@ -381,8 +381,8 @@ export class TitleScene extends Phaser.Scene {
     }
 
     // --- Row 3: Theme (left) + Map (right) ---
-    lbl(panelCX - 320, panelY, 'Theme');
-    lbl(panelCX + 170, panelY, 'Map');
+    lbl(panelCX - 320, panelY - 6, 'Theme');
+    lbl(panelCX + 170, panelY - 6, 'Map');
     this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY + 23, (value) => {
       if (this.selectedMap === 'moon' && value === 'day') {
         this.selectOption('theme', 'night');
@@ -402,16 +402,16 @@ export class TitleScene extends Phaser.Scene {
     }, panelCX + 170);
 
     // --- Row 4: Enemies ---
-    lbl(panelCX, panelY + 58, 'Enemies');
+    lbl(panelCX, panelY + 52, 'Enemies');
     this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 80, (value) => {
       this.selectedEnemyType = value;
       this.selectedZombies = value === 'off' ? 'off' : 'on';
     }, panelCX, 140, 125);
 
     // --- Start button ---
-    this.startButton = this.add.rectangle(panelCX, panelY + 116, 290, 42, 0x4d596b, 1)
+    this.startButton = this.add.rectangle(panelCX, panelY + 124, 290, 42, 0x4d596b, 1)
       .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
-    this.startText = this.add.text(panelCX, panelY + 116, 'Select All Options', {
+    this.startText = this.add.text(panelCX, panelY + 124, 'Select All Options', {
       ...TEXT_STYLE, fontSize: '20px', color: '#c6d0dd', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(18);
     this.startButton.setInteractive({ useHandCursor: true });

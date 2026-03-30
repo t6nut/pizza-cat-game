@@ -205,9 +205,9 @@ export class MainScene extends Phaser.Scene {
     }
     this.physics.add.collider(this.kitten, this.ground);
 
-    const heliKey  = this.currentMapKey === 'moon' ? 'ufoSprite'    : 'chefHeli';
+    const heliKey  = this.currentMapKey === 'moon' ? 'ufoSprite'    : 'pizzaOven';
     const planeKey = this.currentMapKey === 'moon' ? 'rocketSprite' : 'pizzaPlane';
-    this.chefHeli   = this.add.sprite(WORLD_WIDTH / 2, 88, heliKey).setScale(1.55).setDepth(5);
+    this.chefHeli   = this.add.sprite(WORLD_WIDTH / 2, 88, heliKey).setScale(1.35).setDepth(5);
     this.pizzaPlane = this.add.sprite(-140, 120, planeKey).setVisible(false).setScale(1.22).setDepth(5);
 
     this.pizzaGroup = this.physics.add.group({ bounceY: 0, collideWorldBounds: false, maxSize: 180 });
