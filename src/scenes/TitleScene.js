@@ -165,6 +165,28 @@ export class TitleScene extends Phaser.Scene {
       ...TEXT_STYLE, fontSize: '12px', color: '#ffd38f', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20);
 
+    this.resetSizeButton = this.add.rectangle(prevX, prevY + 116, 148, 30, 0x283c5c, 1)
+      .setDepth(20).setStrokeStyle(2, 0x89b8ff, 0.7)
+      .setInteractive({ useHandCursor: true });
+    this.resetSizeText = this.add.text(prevX, prevY + 116, 'Reset Size', {
+      ...TEXT_STYLE, fontSize: '14px', color: '#e2f0ff', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(21);
+    this.resetSizeButton.on('pointerover', () => {
+      if (this.resetSizeButton?.input?.enabled) {
+        this.resetSizeButton.setFillStyle(0x33517a);
+      }
+    });
+    this.resetSizeButton.on('pointerout', () => {
+      if (this.resetSizeButton?.input?.enabled) {
+        this.resetSizeButton.setFillStyle(0x283c5c);
+      }
+    });
+    this.resetSizeButton.on('pointerdown', () => {
+      if (this.resetSizeButton?.input?.enabled) {
+        this.resetSelectedCharacterGrowth();
+      }
+    });
+
     this.createOptionsPanel();
 
     // Decorative pizzas drop every 1 s
@@ -349,6 +371,11 @@ export class TitleScene extends Phaser.Scene {
       if (this.charPreviewSprite) {
         this.charPreviewSprite.setTexture(CHARACTER_OPTIONS[value].idle);
         this.charPreviewLabel.setText(CHARACTER_OPTIONS[value].label);
+        if (value === 'orange') {
+          this.charPreviewSprite.setTint(0xffb347);
+        } else {
+          this.charPreviewSprite.clearTint();
+        }
       }
       this.refreshSelectedCatSize();
     }, panelCX);
@@ -380,23 +407,12 @@ export class TitleScene extends Phaser.Scene {
       this.updateMenuBackdrop();
     }, panelCX + 170);
 
-    // --- Row 4: Enemies (left) + Size reset (right) ---
-    lbl(panelCX - 270, panelY + 58, 'Enemies');
-    lbl(panelCX + 285, panelY + 58, 'Size');
+    // --- Row 4: Enemies ---
+    lbl(panelCX, panelY + 58, 'Enemies');
     this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 80, (value) => {
       this.selectedEnemyType = value;
       this.selectedZombies = value === 'off' ? 'off' : 'on';
-    }, panelCX - 270, 128, 115);
-
-    this.resetSizeButton = this.add.rectangle(panelCX + 285, panelY + 80, 148, 32, 0x283c5c, 1)
-      .setDepth(17).setStrokeStyle(2, 0x89b8ff, 0.7)
-      .setInteractive({ useHandCursor: true });
-    this.resetSizeText = this.add.text(panelCX + 285, panelY + 80, 'Reset Size', {
-      ...TEXT_STYLE, fontSize: '15px', color: '#e2f0ff', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(18);
-    this.resetSizeButton.on('pointerover', () => this.resetSizeButton.setFillStyle(0x33517a));
-    this.resetSizeButton.on('pointerout', () => this.resetSizeButton.setFillStyle(0x283c5c));
-    this.resetSizeButton.on('pointerdown', () => this.resetSelectedCharacterGrowth());
+    }, panelCX, 140, 125);
 
     // --- Start button ---
     this.startButton = this.add.rectangle(panelCX, panelY + 116, 290, 42, 0x4d596b, 1)
@@ -516,6 +532,23 @@ export class TitleScene extends Phaser.Scene {
     }
     const size = this.getGrowthForCharacter(this.selectedCharacter);
     this.charPreviewSize.setText(`Size: ${size.toFixed(2)}x`);
+    this.updateResetSizeButtonState(size);
+  }
+
+  updateResetSizeButtonState(sizeValue = null) {
+    if (!this.resetSizeButton || !this.resetSizeText) {
+      return;
+    }
+    const size = sizeValue ?? this.getGrowthForCharacter(this.selectedCharacter);
+    const canReset = size > 1.001;
+
+    this.resetSizeButton.alpha = canReset ? 1 : 0.45;
+    this.resetSizeText.alpha = canReset ? 1 : 0.55;
+    this.resetSizeButton.setFillStyle(canReset ? 0x283c5c : 0x1e2c42);
+    this.resetSizeButton.disableInteractive();
+    if (canReset) {
+      this.resetSizeButton.setInteractive({ useHandCursor: true });
+    }
   }
 
   resetSelectedCharacterGrowth() {

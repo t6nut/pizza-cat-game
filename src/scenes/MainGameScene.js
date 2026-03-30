@@ -181,6 +181,12 @@ export class MainScene extends Phaser.Scene {
     this.kitten.setDragX(1300);
     this.kitten.setMaxVelocity(380, 1000);
     this.kitten.setDepth(8);
+    // Force the orange cat sprite to read clearly orange even if source asset colors vary.
+    if (this.currentCharacterKey === 'orange') {
+      this.kitten.setTint(0xffb347);
+    } else {
+      this.kitten.clearTint();
+    }
     this.physics.add.collider(this.kitten, this.ground);
 
     const heliKey  = this.currentMapKey === 'moon' ? 'ufoSprite'    : 'chefHeli';
@@ -1814,19 +1820,39 @@ export class MainScene extends Phaser.Scene {
     this.flashlightLength = length;
     this.flashlightHalfWidth = halfWidth;
 
-    // Cone beam from hand.
     this.flashlightCone.clear();
-    this.flashlightCone.fillStyle(dayLaser ? 0xff3b3b : 0xfff1b0, dayLaser ? 0.17 : 0.13);
-    this.flashlightCone.fillTriangle(handX, handY, farX, handY - halfWidth, farX, handY + halfWidth);
-    this.flashlightCone.fillStyle(dayLaser ? 0xff8a8a : 0xfff7d1, dayLaser ? 0.26 : 0.21);
-    this.flashlightCone.fillTriangle(
-      handX,
-      handY,
-      handX + dir * (length * 0.65),
-      handY - halfWidth * 0.4,
-      handX + dir * (length * 0.65),
-      handY + halfWidth * 0.4,
-    );
+    if (dayLaser) {
+      // Single red laser line angled toward the ground in front of the cat.
+      const endX = handX + dir * 220;
+      const endY = handY + 84;
+      this.flashlightCone.lineStyle(3, 0xff4a4a, 0.95);
+      this.flashlightCone.beginPath();
+      this.flashlightCone.moveTo(handX, handY);
+      this.flashlightCone.lineTo(endX, endY);
+      this.flashlightCone.strokePath();
+
+      this.flashlightCone.lineStyle(1, 0xffb0b0, 0.95);
+      this.flashlightCone.beginPath();
+      this.flashlightCone.moveTo(handX, handY);
+      this.flashlightCone.lineTo(endX, endY);
+      this.flashlightCone.strokePath();
+
+      this.flashlightLength = 236;
+      this.flashlightHalfWidth = 14;
+    } else {
+      // Night flashlight cone.
+      this.flashlightCone.fillStyle(0xfff1b0, 0.13);
+      this.flashlightCone.fillTriangle(handX, handY, farX, handY - halfWidth, farX, handY + halfWidth);
+      this.flashlightCone.fillStyle(0xfff7d1, 0.21);
+      this.flashlightCone.fillTriangle(
+        handX,
+        handY,
+        handX + dir * (length * 0.65),
+        handY - halfWidth * 0.4,
+        handX + dir * (length * 0.65),
+        handY + halfWidth * 0.4,
+      );
+    }
 
     // Draw small gray flashlight handle at hand position.
     const h = this.flashlightHandle;
