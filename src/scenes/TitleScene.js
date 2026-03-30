@@ -58,6 +58,7 @@ export class TitleScene extends Phaser.Scene {
     this.menuJetpack = null;
     this.menuJetpackFlames = null;
     this.menuBackdropBuildings = [];
+    this.menuCityDecor = [];
     this.menuDesertDecor = [];
     this.menuBeachDecor = [];
     this.menuMoonDecor = [];
@@ -197,7 +198,7 @@ export class TitleScene extends Phaser.Scene {
     this.selectOption('mode', 'easy');
     this.selectOption('theme', 'day');
     this.selectOption('map', 'city');
-    this.selectOption('enemies', 'zombies');
+    this.selectOption('enemies', 'off');
   }
 
   _toggleFullscreen() {
@@ -213,21 +214,18 @@ export class TitleScene extends Phaser.Scene {
     this.menuSky = this.add.rectangle(W / 2, H / 2, W, H, 0x99e8ff).setDepth(0);
     this.menuGround = this.add.rectangle(W / 2, H - 108, W, 216, 0x6d7686).setDepth(1);
 
-    for (let i = 0; i < 12; i += 1) {
-      const x = 42 + i * 112;
-      const h = 100 + (i % 4) * 24;
-      const building = this.add.rectangle(x, H - 172 - h * 0.5, 76, h, 0x273348, 0.86).setDepth(2);
-      this.menuBackdropBuildings.push(building);
-    }
+    this.rebuildMenuCityBackdrop(false);
 
-    const duneA = this.add.ellipse(310, H - 120, 620, 180, 0xe7bf7e, 0.75).setDepth(2).setVisible(false);
-    const duneB = this.add.ellipse(940, H - 100, 760, 210, 0xd8b06a, 0.72).setDepth(2).setVisible(false);
-    this.menuDesertDecor.push(duneA, duneB);
+    const duneA = this.add.ellipse(230, H - 80, 420, 110, 0xe7bf7e, 0.55).setDepth(2).setVisible(false);
+    const duneB = this.add.ellipse(640, H - 65, 560, 130, 0xd6aa68, 0.5).setDepth(2).setVisible(false);
+    const desertSun = this.add.circle(830, 86, 34, 0xfff1a0, 0.9).setDepth(2).setVisible(false);
+    this.menuDesertDecor.push(duneA, duneB, desertSun);
 
-    const sea = this.add.rectangle(W / 2, H * 0.64, W, H * 0.5, 0x4fc4dc, 0.62).setDepth(2).setVisible(false);
-    const waveA = this.add.ellipse(300, H * 0.52, 520, 38, 0xbef6ff, 0.48).setDepth(2).setVisible(false);
-    const waveB = this.add.ellipse(880, H * 0.56, 640, 44, 0xbef6ff, 0.44).setDepth(2).setVisible(false);
-    this.menuBeachDecor.push(sea, waveA, waveB);
+    const sea = this.add.rectangle(W / 2, H * 0.58, W, H * 0.64, 0x4fc4dc, 0.6).setDepth(2).setVisible(false);
+    const waveA = this.add.ellipse(260, H * 0.41, 420, 34, 0xbef6ff, 0.45).setDepth(2).setVisible(false);
+    const waveB = this.add.ellipse(700, H * 0.44, 520, 38, 0xbef6ff, 0.4).setDepth(2).setVisible(false);
+    const waveC = this.add.ellipse(1080, H * 0.47, 360, 30, 0xbef6ff, 0.36).setDepth(2).setVisible(false);
+    this.menuBeachDecor.push(sea, waveA, waveB, waveC);
 
     const moonSurface = this.add.ellipse(W / 2, H + 120, 1600, 520, 0x8f97ab, 0.72).setDepth(2).setVisible(false);
     const moonRingA = this.add.ellipse(W / 2, H + 125, 1280, 420, 0xdde3ef, 0.12).setDepth(2).setVisible(false);
@@ -258,6 +256,60 @@ export class TitleScene extends Phaser.Scene {
 
     this.menuJetpack = this.add.graphics().setDepth(7);
     this.menuJetpackFlames = this.add.graphics().setDepth(6);
+  }
+
+  rebuildMenuCityBackdrop(isNight) {
+    for (let i = 0; i < this.menuCityDecor.length; i += 1) {
+      this.menuCityDecor[i].destroy();
+    }
+    this.menuCityDecor = [];
+    this.menuBackdropBuildings = [];
+
+    const buildingColor = isNight ? 0x273348 : 0x7f8ea4;
+    const windowColor = isNight ? 0x1a2236 : 0x5a687d;
+    const lightColor = isNight ? 0xffeb3b : 0xfffacd;
+
+    for (let i = 0; i < 11; i += 1) {
+      const x = 54 + i * 122;
+      const h = 90 + (i % 4) * 26;
+      const building = this.add.rectangle(x, H - 170 - h * 0.5, 78, h, buildingColor, 0.95).setDepth(2);
+      this.menuCityDecor.push(building);
+      this.menuBackdropBuildings.push(building);
+
+      const floorCount = Math.max(3, Math.floor(h / 20));
+      for (let f = 0; f < floorCount; f += 1) {
+        for (let w = 0; w < 2; w += 1) {
+          const windowY = H - 170 - h * 0.5 + (f - floorCount * 0.5) * 22;
+          const windowX = x - 16 + w * 32;
+          const windowGlass = this.add.rectangle(windowX, windowY, 10, 10, windowColor, 0.85).setDepth(2);
+          this.menuCityDecor.push(windowGlass);
+
+          if (isNight && ((i + f + w) % 3 !== 0)) {
+            const light = this.add.rectangle(windowX, windowY, 8, 8, lightColor, 0.65).setDepth(2);
+            this.menuCityDecor.push(light);
+          }
+        }
+      }
+
+      if (i % 3 === 0) {
+        const roofY = H - 170 - h - 5;
+        const roofLeft = this.add.triangle(x - 20, roofY + 6, 0, 10, 20, 0, 40, 10, isNight ? 0x1a1625 : 0x5a3a25, 0.9).setDepth(2);
+        const roofRight = this.add.triangle(x + 20, roofY + 6, 0, 10, 20, 0, 40, 10, isNight ? 0x1a1625 : 0x5a3a25, 0.9).setDepth(2);
+        this.menuCityDecor.push(roofLeft, roofRight);
+      }
+    }
+
+    const skylineBaseY = Math.floor(H * 0.75);
+    const asphalt = this.add.rectangle(W / 2, skylineBaseY + 14, W, 44, 0x262a32, 0.9).setDepth(2);
+    const laneStripe = this.add.rectangle(W / 2, skylineBaseY + 14, W, 3, 0xc9c9bf, 0.55).setDepth(2);
+    this.menuCityDecor.push(asphalt, laneStripe);
+
+    for (let i = 0; i < 7; i += 1) {
+      const tx = 90 + i * 170;
+      const trunk = this.add.rectangle(tx, skylineBaseY - 8, 8, 18, 0x5b3a25, 0.95).setDepth(3);
+      const leaves = this.add.circle(tx, skylineBaseY - 22, 13, 0x4f9650, 0.95).setDepth(3);
+      this.menuCityDecor.push(trunk, leaves);
+    }
   }
 
   updateMenuBackdrop() {
@@ -291,10 +343,9 @@ export class TitleScene extends Phaser.Scene {
     const showBeach = map === 'beach';
     const showMoon = map === 'moon';
 
-    const buildingColor = isNight ? 0x273348 : 0x7f8ea4;
-    for (let i = 0; i < this.menuBackdropBuildings.length; i += 1) {
-      this.menuBackdropBuildings[i].setVisible(showCity);
-      this.menuBackdropBuildings[i].setFillStyle(buildingColor, 0.9);
+    this.rebuildMenuCityBackdrop(isNight);
+    for (let i = 0; i < this.menuCityDecor.length; i += 1) {
+      this.menuCityDecor[i].setVisible(showCity);
     }
     for (let i = 0; i < this.menuDesertDecor.length; i += 1) {
       this.menuDesertDecor[i].setVisible(showDesert);

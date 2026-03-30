@@ -94,7 +94,7 @@ export class MainScene extends Phaser.Scene {
     this.currentModeKey = 'medium';
     this.currentThemeKey = 'day';
     this.currentMapKey = 'city';
-    this.currentEnemyType = 'zombies';
+    this.currentEnemyType = 'off';
     this.zombiesEnabled = false;
     this.backgroundElements = [];
     this.audioCtx = null;
@@ -285,8 +285,32 @@ export class MainScene extends Phaser.Scene {
         const x = 54 + i * 122;
         const h = 90 + (i % 4) * 26;
         const buildingColor = cityNight ? 0x273348 : 0x7f8ea4;
+        const windowColor = cityNight ? 0x1a2236 : 0x5a687d;
+        const lightColor = cityNight ? 0xffeb3b : 0xfffacd;
         const building = this.add.rectangle(x, WORLD_HEIGHT - 170 - h * 0.5, 78, h, buildingColor, 0.95).setDepth(2);
         this.backgroundElements.push(building);
+
+        const floorCount = Math.max(3, Math.floor(h / 20));
+        for (let f = 0; f < floorCount; f += 1) {
+          for (let w = 0; w < 2; w += 1) {
+            const windowY = WORLD_HEIGHT - 170 - h * 0.5 + (f - floorCount * 0.5) * 22;
+            const windowX = x - 16 + w * 32;
+            const windowGlass = this.add.rectangle(windowX, windowY, 10, 10, windowColor, 0.85).setDepth(2);
+            this.backgroundElements.push(windowGlass);
+
+            if (cityNight && ((i + f + w) % 3 !== 0)) {
+              const light = this.add.rectangle(windowX, windowY, 8, 8, lightColor, 0.65).setDepth(2);
+              this.backgroundElements.push(light);
+            }
+          }
+        }
+
+        if (i % 3 === 0) {
+          const roofY = WORLD_HEIGHT - 170 - h - 5;
+          const roofLeft = this.add.triangle(x - 20, roofY + 6, 0, 10, 20, 0, 40, 10, cityNight ? 0x1a1625 : 0x5a3a25, 0.9).setDepth(2);
+          const roofRight = this.add.triangle(x + 20, roofY + 6, 0, 10, 20, 0, 40, 10, cityNight ? 0x1a1625 : 0x5a3a25, 0.9).setDepth(2);
+          this.backgroundElements.push(roofLeft, roofRight);
+        }
       }
 
       const skylineBaseY = Math.floor(WORLD_HEIGHT * 0.75);
@@ -706,7 +730,7 @@ export class MainScene extends Phaser.Scene {
       if (!e?.active) {
         continue;
       }
-      if (Math.abs(e.x - startX) < 34) {
+      if (Math.abs(e.x - startX) < 72) {
         return;
       }
     }
@@ -1377,13 +1401,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    const scale = this.sizeMultiplier;
-    // Body scales with the cat to maintain proportional hitbox.
+    const scale = Phaser.Math.Clamp(this.sizeMultiplier || 1, 1, 8);
     const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * scale), 14, 42);
     const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * scale), 10, 32);
-    // Center the body within the scaled sprite.
+    // Cat sprites have transparent bottom padding; compensate so feet stay glued to ground while scaling.
+    const spriteBottomPad = this.kitten.displayHeight * (2 / 24);
     const offsetX = Math.max(0, (this.kitten.displayWidth - bodyW) * 0.5);
-    const offsetY = Math.max(0, (this.kitten.displayHeight - bodyH) * 0.5);
+    const offsetY = Math.max(0, this.kitten.displayHeight - bodyH - spriteBottomPad);
     body.setSize(bodyW, bodyH, false);
     body.setOffset(offsetX, offsetY);
 
@@ -1391,7 +1415,6 @@ export class MainScene extends Phaser.Scene {
     const nearGround = (body.blocked.down || body.touching.down) && body.velocity.y >= 0;
     if (nearGround) {
       body.y = groundTop - body.height;
-      // Lock sprite's visual feet to ground (origin is at bottom center).
       this.kitten.y = groundTop;
     }
   }
@@ -1629,6 +1652,7 @@ export class MainScene extends Phaser.Scene {
       this.showCatchPopup(this.kitten.x, this.kitten.y - 64 * this.sizeMultiplier, 'BONUS FLYOVER!');
     }
     this.updateKittenMovement(delta);
+    this.syncKittenBodyToFeet();
     if (this.moonWrapEnabled) {
       if (this.kitten.x < -8) {
         this.kitten.x = WORLD_WIDTH + 8;
