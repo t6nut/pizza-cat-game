@@ -403,7 +403,8 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    const beamEnabled = this.flashlightOn && (themeKey === 'night' || themeKey === 'day');
+    const beamEnabled = this.flashlightOn && this.flashlightBattery > 0
+      && (themeKey === 'night' || themeKey === 'day');
     this.flashlightCone.setVisible(beamEnabled);
     this.flashlightHandle.setVisible(beamEnabled);
     if (!beamEnabled) {
@@ -689,9 +690,6 @@ export class MainScene extends Phaser.Scene {
     if (!zombie) {
       return;
     }
-    if (!zombie.shadow || !zombie.shadow.active) {
-      zombie.shadow = this.add.ellipse(startX, this.getGroundSurfaceY(), 36, 12, 0x000000, 0.2).setDepth(6);
-    }
     if (zombie.umbrella) {
       zombie.umbrella.destroy();
       zombie.umbrella = null;
@@ -971,10 +969,6 @@ export class MainScene extends Phaser.Scene {
     const stomped = this.kittenPrevVelY > 120;
     if (stomped) {
       zombie.alive = false;
-      if (zombie.shadow) {
-        zombie.shadow.destroy();
-        zombie.shadow = null;
-      }
       if (zombie.umbrella) {
         zombie.umbrella.destroy();
         zombie.umbrella = null;
@@ -1348,20 +1342,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    const scale = this.sizeMultiplier;
-    const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * scale), 14, 42);
-    const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * scale), 10, 32);
-    body.setSize(bodyW, bodyH, false);
-    body.setOffset(
-      CHARACTER_HITBOX.offsetX + Math.round((CHARACTER_HITBOX.width - bodyW) * 0.5),
-      CHARACTER_HITBOX.offsetY + Math.round(CHARACTER_HITBOX.height - bodyH),
-    );
+    body.setSize(CHARACTER_HITBOX.width, CHARACTER_HITBOX.height, false);
+    body.setOffset(CHARACTER_HITBOX.offsetX, CHARACTER_HITBOX.offsetY);
 
     const groundTop = this.getGroundSurfaceY();
-    const nearGround = body.bottom >= groundTop - 24 && body.velocity.y >= 0;
+    const nearGround = (body.blocked.down || body.touching.down) && body.velocity.y >= 0;
     if (nearGround) {
       body.y = groundTop - body.height;
-      this.kitten.y = body.y + body.height;
     }
   }
 
@@ -1577,7 +1564,9 @@ export class MainScene extends Phaser.Scene {
       this.zombieHitCooldown -= delta;
     }
 
-    if (this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0) {
+    const beamUsingBattery = this.flashlightOn && this.flashlightBattery > 0
+      && (this.currentThemeKey === 'night' || this.currentThemeKey === 'day');
+    if (beamUsingBattery) {
       this.flashlightBattery = Math.max(0, this.flashlightBattery - (this.flashlightDrainPerSec * delta) / 1000);
       this.updateHud();
     }
@@ -1629,15 +1618,6 @@ export class MainScene extends Phaser.Scene {
       this.rocketShadow.y = this.getGroundSurfaceY() + 1;
     }
     const enemies = this.zombieGroup.getChildren();
-    for (let i = 0; i < enemies.length; i += 1) {
-      const enemy = enemies[i];
-      if (enemy.shadow) {
-        enemy.shadow.setVisible(enemy.active);
-        enemy.shadow.x = enemy.x;
-        enemy.shadow.y = this.getGroundSurfaceY() + 1;
-        enemy.shadow.width = 36 * Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.2);
-      }
-    }
 
     const pizzaItems = this.pizzaGroup.getChildren();
     for (let i = 0; i < pizzaItems.length; i += 1) {
@@ -1737,9 +1717,6 @@ export class MainScene extends Phaser.Scene {
       if (body.velocity.y >= 0 && Math.abs(body.bottom - groundTop) > 1) {
         body.y = groundTop - body.height;
       }
-      if (body.velocity.y >= 0) {
-        this.kitten.y = body.y + body.height;
-      }
     }
   }
 
@@ -1759,10 +1736,6 @@ export class MainScene extends Phaser.Scene {
     for (let i = 0; i < children.length; i += 1) {
       const zombie = children[i];
       if (zombie.active && (zombie.x < -60 || zombie.x > WORLD_WIDTH + 60)) {
-        if (zombie.shadow) {
-          zombie.shadow.destroy();
-          zombie.shadow = null;
-        }
         if (zombie.umbrella) {
           zombie.umbrella.destroy();
           zombie.umbrella = null;
@@ -1774,7 +1747,7 @@ export class MainScene extends Phaser.Scene {
 
   updateFlashlightPosition() {
     const nightBeam = this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0;
-    const dayLaser = this.currentThemeKey === 'day' && this.flashlightOn;
+    const dayLaser = this.currentThemeKey === 'day' && this.flashlightOn && this.flashlightBattery > 0;
     const lightEnabled = nightBeam || dayLaser;
     if (!lightEnabled) {
       this.flashlightCone.clear();
@@ -1827,7 +1800,7 @@ export class MainScene extends Phaser.Scene {
   updateZombieLightEffect(delta) {
     const zombies = this.zombieGroup.getChildren();
     const nightBeam = this.currentThemeKey === 'night' && this.flashlightOn && this.flashlightBattery > 0;
-    const dayLaser = this.currentThemeKey === 'day' && this.flashlightOn;
+    const dayLaser = this.currentThemeKey === 'day' && this.flashlightOn && this.flashlightBattery > 0;
     const lightActive = nightBeam || dayLaser;
 
     for (let i = 0; i < zombies.length; i += 1) {

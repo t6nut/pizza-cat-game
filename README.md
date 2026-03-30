@@ -1,4 +1,4 @@
-# Kitten Pizza Catch
+# pizza-cat-game
 
 A tiny endless 2D pixel-art Phaser game prototype.
 
@@ -11,9 +11,9 @@ This repo is configured to auto-deploy to GitHub Pages from `main` using GitHub 
 3. Under `Build and deployment`, set `Source` to `GitHub Actions`.
 4. Wait for the `Deploy static site to Pages` workflow to finish.
 
-Demo URL:
+Demo URL (after renaming the GitHub repo to `pizza-cat-game`):
 
-- `https://t6nut.github.io/2d-cat-eating-game/`
+- `https://t6nut.github.io/pizza-cat-game/`
 
 ## Setup
 
@@ -39,4 +39,4 @@ Demo URL:
 - Full pizzas grant 5x growth compared to slices
 - Night theme adds stars, moon, moonshine, and a cat flashlight glow
 - Zombies mode spawns walkers you can jump over or stomp on their head
-- Press `R` in-game to return to the title options screen
+- Press `ESC` in-game to return to the title options screen
