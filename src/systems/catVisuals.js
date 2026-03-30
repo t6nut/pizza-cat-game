@@ -219,8 +219,8 @@ export function drawJetpackVisual(scene, active) {
 
   const scale = scene.sizeMultiplier;
   const packX = scene.kitten.x;
-  const packY = scene.kitten.y - 7 * scale;
-  const packW = 11 * scale;
+  const packY = scene.kitten.y - 11 * scale;
+  const packW = 12 * scale;
   const packH = 14 * scale;
 
   scene.jetpackPack.clear();
@@ -229,9 +229,9 @@ export function drawJetpackVisual(scene, active) {
   scene.jetpackPack.fillStyle(0x939db0, 1);
   scene.jetpackPack.fillRect(packX - 2 * scale, packY - 3 * scale, 4 * scale, 5 * scale);
   scene.jetpackPack.fillStyle(0x2d3340, 0.9);
-  // Side pipes near lower back remain visible from behind the cat body.
-  scene.jetpackPack.fillRect(packX - 7.2 * scale, packY + 1.2 * scale, 2.4 * scale, 6 * scale);
-  scene.jetpackPack.fillRect(packX + 4.8 * scale, packY + 1.2 * scale, 2.4 * scale, 6 * scale);
+  // Side edges/pipes peek from both sides of the cat.
+  scene.jetpackPack.fillRect(packX - 8.2 * scale, packY - 0.8 * scale, 2.6 * scale, 6.5 * scale);
+  scene.jetpackPack.fillRect(packX + 5.6 * scale, packY - 0.8 * scale, 2.6 * scale, 6.5 * scale);
 
   scene.jetpackFlames.clear();
   if (!active) {
@@ -240,9 +240,9 @@ export function drawJetpackVisual(scene, active) {
 
   const flicker = 0.75 + Math.sin(scene.time.now * 0.03) * 0.25;
   const flameLen = 10 * scale * flicker;
-  const leftNozzleX = packX - 6 * scale;
-  const rightNozzleX = packX + 6 * scale;
-  const nozzleY = packY + 8 * scale;
+  const leftNozzleX = packX - 6.9 * scale;
+  const rightNozzleX = packX + 6.9 * scale;
+  const nozzleY = packY + 7.6 * scale;
 
   scene.jetpackFlames.fillStyle(0xffb347, 0.95);
   scene.jetpackFlames.fillTriangle(leftNozzleX - 1.5 * scale, nozzleY, leftNozzleX + 1.5 * scale, nozzleY, leftNozzleX, nozzleY + flameLen);

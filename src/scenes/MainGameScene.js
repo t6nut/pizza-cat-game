@@ -261,6 +261,8 @@ export class MainScene extends Phaser.Scene {
     if (this.currentMapKey !== 'moon') {
       this.ovenFlameGfx = this.add.graphics().setDepth(6);
       this.ovenFlameTime = 0;
+      this.chefTossGfx = this.add.graphics().setDepth(7);
+      this.chefTossUntil = 0;
     }
     this.rocketShadow = this.add.ellipse(this.pizzaPlane.x, this.getGroundSurfaceY(), 88, 20, 0x000000, 0.16).setDepth(4).setVisible(false);
     this.createAstronautHelmet();
@@ -621,9 +623,9 @@ export class MainScene extends Phaser.Scene {
       const fl = this.ovenFlameGfx;
       fl.clear();
       // SVG viewBox 190x140 → sprite origin maps to SVG point (95, 70)
-      // Oven flame column center at SVG ~(79, 103) → scale 0.7 offset:
+      // Oven shortened vertically: flame center now at SVG ~(79, 89) → scale 0.7 offset.
       const fx = this.chefHeli.x + (79 - 95) * 0.7; // ≈ -11
-      const fy = this.chefHeli.y + (103 - 70) * 0.7; // ≈ +23
+      const fy = this.chefHeli.y + (89 - 70) * 0.7; // ≈ +13
       const f1 = 0.72 + Math.sin(this.ovenFlameTime * 3.1) * 0.14;
       const f2 = 0.72 + Math.sin(this.ovenFlameTime * 7.5 + 1.2) * 0.16;
       fl.fillStyle(0xff4400, f1 * 0.9);
@@ -635,6 +637,48 @@ export class MainScene extends Phaser.Scene {
       fl.fillStyle(0xffffff, f2 * 0.55);
       fl.fillEllipse(fx, fy - 10, 5, 5);
     }
+
+    if (this.chefTossGfx) {
+      const g = this.chefTossGfx;
+      g.clear();
+      if (this.time.now < this.chefTossUntil) {
+        const duration = 180;
+        const p = Phaser.Math.Clamp(1 - (this.chefTossUntil - this.time.now) / duration, 0, 1);
+        const swing = Math.sin(p * Math.PI);
+
+        // Approximate shoulder/hand anchors from chef coordinates in the oven SVG.
+        const shoulderX = this.chefHeli.x + (170 - 95) * 0.7;
+        const shoulderY = this.chefHeli.y + (117 - 70) * 0.7;
+        const handX = this.chefHeli.x + (177 - 95) * 0.7 + swing * 8;
+        const handY = this.chefHeli.y + (108 - 70) * 0.7 - swing * 11;
+
+        g.lineStyle(5, 0xf6f6f6, 1);
+        g.beginPath();
+        g.moveTo(shoulderX, shoulderY);
+        g.lineTo(handX, handY);
+        g.strokePath();
+
+        g.fillStyle(0xf5c49e, 1);
+        g.fillCircle(handX, handY, 4);
+
+        // Tossed slice follows hand with a slight lead and spin.
+        const sliceX = handX + 5 + swing * 4;
+        const sliceY = handY - 7 - swing * 2;
+        const s = 0.9;
+        g.fillStyle(0xf5d020, 0.95);
+        g.fillTriangle(sliceX, sliceY - 4 * s, sliceX - 5 * s, sliceY + 5 * s, sliceX + 5 * s, sliceY + 5 * s);
+        g.fillStyle(0xd03020, 0.9);
+        g.fillCircle(sliceX - 2 * s, sliceY + 1 * s, 1.2 * s);
+        g.fillCircle(sliceX + 2 * s, sliceY + 2 * s, 1.2 * s);
+      }
+    }
+  }
+
+  playChefTossAnimation() {
+    if (!this.chefTossGfx || this.currentMapKey === 'moon') {
+      return;
+    }
+    this.chefTossUntil = this.time.now + 180;
   }
 
   updateKittenMovement(delta) {

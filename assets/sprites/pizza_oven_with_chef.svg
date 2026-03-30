@@ -49,6 +49,7 @@
   <circle cx="86" cy="48" r="6.5" fill="#f5d020"/>
   </g>
 
+  <g transform="translate(0 16.5) scale(1 0.7)">
   <!-- ===== OVEN CHIMNEY ===== -->
   <rect x="71" y="58" width="16" height="16" fill="#8a5550" rx="1"/>
   <rect x="67" y="55" width="24" height="6" fill="#7a4540" rx="2"/>
@@ -118,6 +119,7 @@
   <rect x="34" y="114" width="90" height="7" fill="#882000" rx="2"/>
   <rect x="48" y="119" width="12" height="5" fill="#661800"/>
   <rect x="98" y="119" width="12" height="5" fill="#661800"/>
+  </g>
 
   <!-- ===== CHEF MARIO (right side, left arm grips oven) ===== -->
 
