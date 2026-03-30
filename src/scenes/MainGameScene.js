@@ -331,13 +331,24 @@ export class MainScene extends Phaser.Scene {
       this.backgroundElements.push(sea, wave1, wave2, wave3);
     } else if (mapKey === 'moon') {
       this.bgSky.setVisible(true);
-      this.bgGround.setVisible(true);
-      this.bgGround.setAlpha(0.35);
+      this.bgSky.setFillStyle(0x0c1330, 1);
+      this.bgGround.setVisible(false);
       const moonSurface = this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT + 150, 1400, 560, 0x8f97ab, 0.8).setDepth(2);
       const ringA = this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT + 160, 1250, 500, 0xc7cdd8, 0.08).setDepth(3);
       const ringB = this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT + 170, 1120, 440, 0xdde3ef, 0.08).setDepth(3);
-      const earth = this.add.circle(120, 90, 24, 0x5ca7f3, 0.9).setDepth(3);
-      this.backgroundElements.push(moonSurface, ringA, ringB, earth);
+      this.backgroundElements.push(moonSurface, ringA, ringB);
+
+      // Crater texture pass for moon surface.
+      for (let i = 0; i < 16; i += 1) {
+        const cx = Phaser.Math.Between(90, WORLD_WIDTH - 90);
+        const cy = Phaser.Math.Between(WORLD_HEIGHT - 42, WORLD_HEIGHT + 66);
+        const rx = Phaser.Math.Between(18, 52);
+        const ry = Phaser.Math.Between(9, 24);
+        const crater = this.add.ellipse(cx, cy, rx, ry, 0x727b8e, 0.36).setDepth(3);
+        const rim = this.add.ellipse(cx - 4, cy - 2, rx * 0.7, ry * 0.55, 0xc8cfdb, 0.14).setDepth(3);
+        this.backgroundElements.push(crater, rim);
+      }
+
       this.tweens.add({ targets: ringA, x: WORLD_WIDTH / 2 + 24, y: WORLD_HEIGHT + 152, duration: 4600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       this.tweens.add({ targets: ringB, x: WORLD_WIDTH / 2 - 24, y: WORLD_HEIGHT + 178, duration: 5100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
@@ -362,7 +373,8 @@ export class MainScene extends Phaser.Scene {
     this.applyMap(this.currentMapKey);
 
     if (themeKey === 'night') {
-      for (let i = 0; i < 42; i += 1) {
+      const starCount = this.currentMapKey === 'moon' ? 62 : 42;
+      for (let i = 0; i < starCount; i += 1) {
         const star = this.add.circle(
           Phaser.Math.Between(18, WORLD_WIDTH - 18),
           Phaser.Math.Between(12, 210),
@@ -372,12 +384,32 @@ export class MainScene extends Phaser.Scene {
         );
         star.setDepth(2);
         this.backgroundElements.push(star);
+
+        this.tweens.add({
+          targets: star,
+          alpha: Phaser.Math.FloatBetween(0.18, 0.92),
+          duration: Phaser.Math.Between(450, 1350),
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
       }
-      const moonGlow = this.add.circle(820, 100, 74, 0xbccfff, 0.2).setDepth(2);
-      const moon = this.add.circle(820, 100, 34, 0xe9f3ff, 1).setDepth(3);
-      const moonshine = this.add.ellipse(810, 350, 420, 230, 0x9dbbff, 0.12).setDepth(2);
-      this.backgroundElements.push(moonGlow, moon, moonshine);
-      this.bgSky.setFillStyle(theme.skyColor, 0.92);
+
+      if (this.currentMapKey === 'moon') {
+        // Replace moon with Earth in the sky for moon map.
+        const earthGlow = this.add.circle(1040, 104, 66, 0x7db7ff, 0.2).setDepth(2);
+        const earthOcean = this.add.circle(1040, 104, 30, 0x4f95e8, 0.95).setDepth(3);
+        const landA = this.add.ellipse(1031, 97, 18, 12, 0x69c271, 0.9).setDepth(4);
+        const landB = this.add.ellipse(1048, 112, 14, 9, 0x69c271, 0.86).setDepth(4);
+        this.backgroundElements.push(earthGlow, earthOcean, landA, landB);
+      } else {
+        const moonGlow = this.add.circle(820, 100, 74, 0xbccfff, 0.2).setDepth(2);
+        const moon = this.add.circle(820, 100, 34, 0xe9f3ff, 1).setDepth(3);
+        const moonshine = this.add.ellipse(810, 350, 420, 230, 0x9dbbff, 0.12).setDepth(2);
+        this.backgroundElements.push(moonGlow, moon, moonshine);
+      }
+
+      this.bgSky.setFillStyle(this.currentMapKey === 'moon' ? 0x0c1330 : theme.skyColor, 0.92);
       if (this.currentMapKey === 'beach') {
         this.bgGround.setFillStyle(0x7b6b4d, 1);
       }
@@ -1339,8 +1371,12 @@ export class MainScene extends Phaser.Scene {
     }
 
     const body = this.kitten.body;
-    body.setSize(CHARACTER_HITBOX.width, CHARACTER_HITBOX.height, false);
-    body.setOffset(CHARACTER_HITBOX.offsetX, CHARACTER_HITBOX.offsetY);
+    const bodyW = CHARACTER_HITBOX.width;
+    const bodyH = CHARACTER_HITBOX.height;
+    const offsetX = Math.max(0, (this.kitten.displayWidth - bodyW) * 0.5);
+    const offsetY = Math.max(0, this.kitten.displayHeight - bodyH);
+    body.setSize(bodyW, bodyH, false);
+    body.setOffset(offsetX, offsetY);
 
     const groundTop = this.getGroundSurfaceY();
     const nearGround = (body.blocked.down || body.touching.down) && body.velocity.y >= 0;
@@ -1356,11 +1392,10 @@ export class MainScene extends Phaser.Scene {
     const enemyScale = Phaser.Math.Clamp(enemy.growthScale || 1, 1, 2.6);
     const bodyW = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.width * enemyScale), 14, 42);
     const bodyH = Phaser.Math.Clamp(Math.round(CHARACTER_HITBOX.height * enemyScale), 10, 32);
+    const offsetX = Math.max(0, (enemy.displayWidth - bodyW) * 0.5);
+    const offsetY = Math.max(0, enemy.displayHeight - bodyH);
     enemy.body.setSize(bodyW, bodyH, false);
-    enemy.body.setOffset(
-      CHARACTER_HITBOX.offsetX + Math.round((CHARACTER_HITBOX.width - bodyW) * 0.5),
-      CHARACTER_HITBOX.offsetY + Math.round(CHARACTER_HITBOX.height - bodyH),
-    );
+    enemy.body.setOffset(offsetX, offsetY);
     const groundTop = this.getGroundSurfaceY();
     if (enemy.body.bottom >= groundTop - 24 || enemy.body.velocity.y >= 0) {
       enemy.body.y = groundTop - enemy.body.height;
