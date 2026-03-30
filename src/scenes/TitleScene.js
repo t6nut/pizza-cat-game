@@ -75,12 +75,18 @@ export class TitleScene extends Phaser.Scene {
 
   preload() {
     this.load.svg('kittenIdle',   'assets/sprites/kitten_idle.svg',       { scale: 1 });
+    this.load.svg('kittenWalk1',  'assets/sprites/kitten_walk1.svg',      { scale: 1 });
+    this.load.svg('kittenWalk2',  'assets/sprites/kitten_walk2.svg',      { scale: 1 });
     this.load.svg('kittenRun',    'assets/sprites/kitten_run.svg',        { scale: 1 });
     this.load.svg('kittenEat',    'assets/sprites/kitten_eat.svg',        { scale: 1 });
     this.load.svg('tuxedoIdle',   'assets/sprites/tuxedo_idle.svg',       { scale: 1 });
+    this.load.svg('tuxedoWalk1',  'assets/sprites/tuxedo_walk1.svg',      { scale: 1 });
+    this.load.svg('tuxedoWalk2',  'assets/sprites/tuxedo_walk2.svg',      { scale: 1 });
     this.load.svg('tuxedoRun',    'assets/sprites/tuxedo_run.svg',        { scale: 1 });
     this.load.svg('tuxedoEat',    'assets/sprites/tuxedo_eat.svg',        { scale: 1 });
     this.load.svg('pikatchuIdle', 'assets/sprites/pikatchu_idle.svg',     { scale: 1 });
+    this.load.svg('pikatchuWalk1','assets/sprites/pikatchu_walk1.svg',    { scale: 1 });
+    this.load.svg('pikatchuWalk2','assets/sprites/pikatchu_walk2.svg',    { scale: 1 });
     this.load.svg('pikatchuRun',  'assets/sprites/pikatchu_run.svg',      { scale: 1 });
     this.load.svg('pikatchuEat',  'assets/sprites/pikatchu_eat.svg',      { scale: 1 });
     this.load.svg('pizza',        'assets/sprites/pizza_slice.svg',       { scale: 1 });

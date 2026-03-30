@@ -2,17 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>Pizza Cat</title>
     <link rel="icon" type="image/svg+xml" href="assets/sprites/kitten_idle.svg" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   </head>
   <body>
+    <!-- Portrait-mode overlay -->
+    <div id="portrait-overlay" aria-hidden="true">
+      <div class="portrait-msg">
+        <div class="rotate-icon">&#x1F4F1;</div>
+        <p>Rotate your device<br>to landscape to play!</p>
+      </div>
+    </div>
+
     <main class="shell">
       <div id="game"></div>
-      <p class="hint">← → or A / D to move · Catch pizzas to grow · ESC menu · F light/laser · G fullscreen</p>
+      <p class="hint">← → or A / D to move &middot; Catch pizzas to grow &middot; ESC menu &middot; F light/laser &middot; G fullscreen</p>
     </main>
+
+    <!-- Mobile virtual controls (only rendered on touch devices via CSS) -->
+    <div id="mobile-controls" aria-label="Game controls">
+      <div class="ctrl-group ctrl-left">
+        <button id="btn-left"  class="ctrl-btn" aria-label="Move left">&#x25C4;</button>
+        <button id="btn-right" class="ctrl-btn" aria-label="Move right">&#x25BA;</button>
+      </div>
+      <div class="ctrl-group ctrl-right">
+        <button id="btn-light" class="ctrl-btn ctrl-sm" aria-label="Toggle light">F</button>
+        <button id="btn-jump"  class="ctrl-btn ctrl-lg" aria-label="Jump">&#x25B2;</button>
+      </div>
+    </div>
+
     <script type="module" src="src/main.js"></script>
+    <script>
+      // Mobile control state – read by catPhysics.js via window._mobile
+      window._mobile = { left: false, right: false, jumpJustDown: false, lightJustDown: false };
+
+      function wireCtrl(id, onDown, onUp) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('touchstart',  function(e) { e.preventDefault(); onDown(); }, { passive: false });
+        el.addEventListener('touchend',    function(e) { e.preventDefault(); onUp();   }, { passive: false });
+        el.addEventListener('touchcancel', function(e) { e.preventDefault(); onUp();   }, { passive: false });
+      }
+
+      wireCtrl('btn-left',  function() { window._mobile.left  = true;  }, function() { window._mobile.left  = false; });
+      wireCtrl('btn-right', function() { window._mobile.right = true;  }, function() { window._mobile.right = false; });
+      wireCtrl('btn-jump',  function() { window._mobile.jumpJustDown  = true; }, function() {});
+      wireCtrl('btn-light', function() { window._mobile.lightJustDown = true; }, function() {});
+    </script>
   </body>
 </html>

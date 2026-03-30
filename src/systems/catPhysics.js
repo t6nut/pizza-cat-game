@@ -45,9 +45,11 @@ export function syncEnemyBody(scene, enemy) {
 }
 
 export function updateKittenMovement(scene, delta) {
-  const leftDown = scene.cursors.left.isDown || scene.wasd.A.isDown;
-  const rightDown = scene.cursors.right.isDown || scene.wasd.D.isDown;
-  const jumpPressed = Phaser.Input.Keyboard.JustDown(scene.cursors.up) || Phaser.Input.Keyboard.JustDown(scene.wasd.W);
+  const mob = window._mobile;
+  const leftDown  = scene.cursors.left.isDown  || scene.wasd.A.isDown  || (mob?.left  ?? false);
+  const rightDown = scene.cursors.right.isDown || scene.wasd.D.isDown || (mob?.right ?? false);
+  const mobileJump = mob?.jumpJustDown ? (mob.jumpJustDown = false, true) : false;
+  const jumpPressed = Phaser.Input.Keyboard.JustDown(scene.cursors.up) || Phaser.Input.Keyboard.JustDown(scene.wasd.W) || mobileJump;
   const accel = 1450;
 
   if (jumpPressed && (scene.kitten.body.blocked.down || scene.kitten.body.touching.down)) {
@@ -59,13 +61,21 @@ export function updateKittenMovement(scene, delta) {
     scene.kitten.setVelocityY(Math.max(scene.jetpackMaxLiftSpeed, scene.kitten.body.velocity.y - lift));
   }
 
+  const walkFrames = [
+    scene.kittenSkin.idle,
+    scene.kittenSkin.walk1,
+    scene.kittenSkin.run,
+    scene.kittenSkin.walk2,
+  ];
+
   if (leftDown && !rightDown) {
     scene.kitten.setAccelerationX(-accel);
     scene.kitten.setFlipX(false);
     scene.lastMoveDir = -1;
     scene.facingDir = -1;
     if (scene.eatCooldown <= 0) {
-      scene.kitten.setTexture(scene.kittenSkin.run);
+      scene.walkCycleTime = (scene.walkCycleTime || 0) + delta;
+      scene.kitten.setTexture(walkFrames[Math.floor(scene.walkCycleTime / 120) % 4]);
     }
   } else if (rightDown && !leftDown) {
     scene.kitten.setAccelerationX(accel);
@@ -73,10 +83,12 @@ export function updateKittenMovement(scene, delta) {
     scene.lastMoveDir = 1;
     scene.facingDir = 1;
     if (scene.eatCooldown <= 0) {
-      scene.kitten.setTexture(scene.kittenSkin.run);
+      scene.walkCycleTime = (scene.walkCycleTime || 0) + delta;
+      scene.kitten.setTexture(walkFrames[Math.floor(scene.walkCycleTime / 120) % 4]);
     }
   } else {
     scene.kitten.setAccelerationX(0);
+    scene.walkCycleTime = 0;
     if (scene.eatCooldown <= 0) {
       scene.kitten.setTexture(scene.kittenSkin.idle);
     }

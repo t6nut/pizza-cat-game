@@ -14,9 +14,9 @@ const WORLD_WIDTH = 1280;
 const WORLD_HEIGHT = 720;
 
 const CHARACTER_SKINS = {
-  orange: { idle: 'kittenIdle', run: 'kittenRun', eat: 'kittenEat' },
-  tuxedo: { idle: 'tuxedoIdle', run: 'tuxedoRun', eat: 'tuxedoEat' },
-  pikatchu: { idle: 'pikatchuIdle', run: 'pikatchuRun', eat: 'pikatchuEat' },
+  orange:   { idle: 'kittenIdle',   walk1: 'kittenWalk1',   walk2: 'kittenWalk2',   run: 'kittenRun',   eat: 'kittenEat'   },
+  tuxedo:   { idle: 'tuxedoIdle',   walk1: 'tuxedoWalk1',   walk2: 'tuxedoWalk2',   run: 'tuxedoRun',   eat: 'tuxedoEat'   },
+  pikatchu: { idle: 'pikatchuIdle', walk1: 'pikatchuWalk1', walk2: 'pikatchuWalk2', run: 'pikatchuRun', eat: 'pikatchuEat' },
 };
 
 const MODE_SETTINGS = {
@@ -533,7 +533,8 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.lightToggleKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.lightToggleKey) ||
+        (window._mobile?.lightJustDown && ((window._mobile.lightJustDown = false) || true))) {
       this.flashlightOn = !this.flashlightOn;
       this.updateHud();
     }

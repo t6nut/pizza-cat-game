@@ -66,7 +66,9 @@ export function updateShadows(scene) {
   if (scene.kittenShadow?.active) {
     scene.kittenShadow.x = scene.kitten.x;
     scene.kittenShadow.y = getGroundSurfaceY(scene) + 1;
-    scene.kittenShadow.width = 42 * Phaser.Math.Clamp(1 + scene.sizeMultiplier * 0.2, 1, 1.6);
+    const shadowScale = Phaser.Math.Clamp(scene.sizeMultiplier, 0.8, 5);
+    scene.kittenShadow.width  = 42 * shadowScale;
+    scene.kittenShadow.height = 14 * Phaser.Math.Clamp(shadowScale * 0.55, 0.5, 2.8);
   }
   if (scene.heliShadow?.active) {
     scene.heliShadow.x = scene.chefHeli.x;
