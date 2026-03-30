@@ -134,17 +134,6 @@ export class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(20);
 
-    // Fullscreen button top-right
-    const fsLabel = this.add.text(W - 16, 14, '[ G ] Fullscreen', {
-      ...TEXT_STYLE,
-      fontSize: '15px',
-      color: '#7aaad8',
-      strokeThickness: 2,
-    }).setOrigin(1, 0).setDepth(22).setInteractive({ useHandCursor: true });
-    fsLabel.on('pointerover', () => fsLabel.setColor('#ffffff'));
-    fsLabel.on('pointerout',  () => fsLabel.setColor('#7aaad8'));
-    fsLabel.on('pointerdown', () => this._toggleFullscreen());
-
     this.input.keyboard.on('keydown-G', () => this._toggleFullscreen());
 
     // Character preview (centered above options panel)
@@ -365,29 +354,62 @@ export class TitleScene extends Phaser.Scene {
     };
 
     if (isMobileMenu) {
-      // Mobile: character row sits beside the preview card to free panel space below.
-      lbl(870, 266, 'Character');
-      this.createOptionRow('character', ['orange', 'tuxedo', 'pikatchu'], CHARACTER_OPTIONS, 302, applyCharacterSelection, 870, 130, 120);
+      const btnH = 38; // ~1.2x of default 32
 
-      // Theme moved to top-left; enemies takes the old middle-row slot.
-      lbl(panelCX - 328, panelY - 96, 'Theme');
-      this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, panelY - 66, (value) => {
+      // ---------- CHARACTER – vertical column beside preview card ----------
+      lbl(870, 240, 'Character');
+      this.optionButtons['character'] = [];
+      const charKeys = ['orange', 'tuxedo', 'pikatchu'];
+      const charColX  = 870;
+      const charColY0 = 268;
+      const charColStep = 44;
+      charKeys.forEach((key, i) => {
+        const cy = charColY0 + i * charColStep;
+        const box = this.add.rectangle(charColX, cy, 168, btnH, 0x283c5c, 1)
+          .setDepth(17).setStrokeStyle(2, 0x89b8ff, 0.7);
+        box.selected = false;
+        const tx = this.add.text(charColX, cy, CHARACTER_OPTIONS[key].label, {
+          ...TEXT_STYLE, fontSize: '15px', color: '#e2f0ff', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(18);
+        box.setInteractive({ useHandCursor: true });
+        box.on('pointerover', () => { if (!box.selected) box.setFillStyle(0x33517a); });
+        box.on('pointerout',  () => { if (!box.selected) box.setFillStyle(0x283c5c); });
+        box.on('pointerdown', () => {
+          const row = this.optionButtons['character'];
+          for (let j = 0; j < row.length; j += 1) { row[j].box.selected = false; row[j].box.setFillStyle(0x283c5c); }
+          box.selected = true;
+          box.setFillStyle(0x3b8a5f);
+          applyCharacterSelection(key);
+          this.updateStartButtonState();
+        });
+        this.optionButtons['character'].push({ key, box, text: tx, onSelect: applyCharacterSelection });
+      });
+
+      // ---------- THEME (left) + ENEMIES (right) – same row ----------
+      const topRowLblY = panelY - 108; // 428
+      const topRowBtnY = panelY - 78;  // 458
+      const themeX  = 270;
+      const enemyX  = 700;
+
+      lbl(themeX, topRowLblY, 'Theme');
+      this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, topRowBtnY, (value) => {
         if (this.selectedMap === 'moon' && value === 'day') {
           this.selectOption('theme', 'night');
           return;
         }
         this.selectedTheme = value;
         this.updateMenuBackdrop();
-      }, panelCX - 328, 164, 170);
+      }, themeX, 128, 114, btnH);
 
-      lbl(panelCX, panelY - 16, 'Enemies');
-      this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, panelY + 16, (value) => {
+      lbl(enemyX, topRowLblY, 'Enemies');
+      this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, topRowBtnY, (value) => {
         this.selectedEnemyType = value;
         this.selectedZombies = value === 'off' ? 'off' : 'on';
-      }, panelCX, 200, 208);
+      }, enemyX, 152, 136, btnH);
 
-      lbl(panelCX, panelY + 66, 'Map');
-      this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 96, (value) => {
+      // ---------- MAP – raised ----------
+      lbl(panelCX, panelY - 30, 'Map');
+      this.createOptionRow('map', ['city', 'desert', 'beach', 'moon'], MAP_OPTIONS, panelY + 2, (value) => {
         this.selectedMap = value;
         this.updateThemeAvailabilityForMap(value);
         if (value === 'moon' && this.selectedTheme !== 'night') {
@@ -395,12 +417,13 @@ export class TitleScene extends Phaser.Scene {
           return;
         }
         this.updateMenuBackdrop();
-      }, panelCX, 152, 148);
+      }, panelCX, 142, 130, btnH);
 
-      this.startButton = this.add.rectangle(panelCX, panelY + 140, 336, 52, 0x4d596b, 1)
+      // ---------- START – raised ----------
+      this.startButton = this.add.rectangle(panelCX, panelY + 76, 360, 56, 0x4d596b, 1)
         .setDepth(17).setStrokeStyle(3, 0x9bc4ff, 0.5);
-      this.startText = this.add.text(panelCX, panelY + 140, 'Select All Options', {
-        ...TEXT_STYLE, fontSize: '24px', color: '#c6d0dd', strokeThickness: 3,
+      this.startText = this.add.text(panelCX, panelY + 76, 'Select All Options', {
+        ...TEXT_STYLE, fontSize: '26px', color: '#c6d0dd', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(18);
     } else {
       // Desktop/tablet layout.
@@ -458,18 +481,19 @@ export class TitleScene extends Phaser.Scene {
     dayEntry.text.alpha = moonLocked ? 0.5 : 1;
   }
 
-  // btnSpacing / btnWidth override defaults for rows that need tighter packing
-  createOptionRow(groupName, keys, sourceMap, y, onSelect, centerX = W / 2, btnSpacing = null, btnWidth = null) {
+  // btnSpacing / btnWidth / btnHeight override defaults for rows that need tighter packing
+  createOptionRow(groupName, keys, sourceMap, y, onSelect, centerX = W / 2, btnSpacing = null, btnWidth = null, btnHeight = null) {
     this.optionButtons[groupName] = [];
     const count   = keys.length;
     const spacing = btnSpacing ?? (count === 2 ? 138 : count === 4 ? 125 : 188);
     const width   = btnWidth   ?? (count === 2 ? 124 : count === 4 ? 112 : 170);
+    const height  = btnHeight  ?? 32;
     const startX  = centerX - ((count - 1) * spacing) / 2;
 
     for (let i = 0; i < count; i += 1) {
       const key   = keys[i];
       const label = sourceMap[key].label;
-      const box   = this.add.rectangle(startX + i * spacing, y, width, 32, 0x283c5c, 1)
+      const box   = this.add.rectangle(startX + i * spacing, y, width, height, 0x283c5c, 1)
         .setDepth(17).setStrokeStyle(2, 0x89b8ff, 0.7);
       box.selected = false;
 

@@ -12,5 +12,5 @@
   <!-- left leg: raised/forward -->
   <rect x="8" y="17" width="4" height="5" fill="#2a2a2a"/>
   <!-- right leg: trailing/flat -->
-  <rect x="20" y="21" width="4" height="2" fill="#2a2a2a"/>
+  <rect x="20" y="20" width="4" height="3" fill="#2a2a2a"/>
 </svg>

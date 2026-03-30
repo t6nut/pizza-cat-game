@@ -26,11 +26,11 @@
 
     <!-- Mobile virtual controls (only rendered on touch devices via CSS) -->
     <div id="mobile-controls" aria-label="Game controls">
-      <div class="ctrl-group ctrl-left">
+      <div class="ctrl-group ctrl-left game-only-control">
         <button id="btn-left"  class="ctrl-btn" aria-label="Move left">&#x25C4;</button>
         <button id="btn-right" class="ctrl-btn" aria-label="Move right">&#x25BA;</button>
       </div>
-      <div class="ctrl-group ctrl-right">
+      <div class="ctrl-group ctrl-right game-only-control">
         <button id="btn-light" class="ctrl-btn ctrl-sm" aria-label="Toggle light">F</button>
         <button id="btn-jump"  class="ctrl-btn ctrl-lg" aria-label="Jump">&#x25B2;</button>
       </div>
@@ -43,7 +43,13 @@
     <script type="module" src="src/main.js"></script>
     <script>
       // Mobile control state – read by catPhysics.js via window._mobile
-      window._mobile = { left: false, right: false, jumpJustDown: false, lightJustDown: false, menuJustDown: false, fullscreenJustDown: false };
+      window._mobile = { left: false, right: false, jumpJustDown: false, lightJustDown: false, menuJustDown: false };
+
+      function _toggleFS() {
+        var doc = window.document;
+        if (doc.fullscreenElement) { doc.exitFullscreen(); }
+        else { doc.documentElement.requestFullscreen().catch(function() {}); }
+      }
 
       function wireCtrl(id, onDown, onUp) {
         const el = document.getElementById(id);
@@ -58,7 +64,7 @@
       wireCtrl('btn-jump',  function() { window._mobile.jumpJustDown  = true; }, function() {});
       wireCtrl('btn-light', function() { window._mobile.lightJustDown = true; }, function() {});
       wireCtrl('btn-menu',  function() { window._mobile.menuJustDown  = true; }, function() {});
-      wireCtrl('btn-fullscreen', function() { window._mobile.fullscreenJustDown = true; }, function() {});
+      wireCtrl('btn-fullscreen', function() { _toggleFS(); }, function() {});
     </script>
   </body>
 </html>

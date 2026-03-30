@@ -561,8 +561,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     // Snapshot velocity before physics step so the stomp callback has reliable data.
-    if (Phaser.Input.Keyboard.JustDown(this.fullscreenKey) ||
-        (window._mobile?.fullscreenJustDown && ((window._mobile.fullscreenJustDown = false) || true))) {
+    if (Phaser.Input.Keyboard.JustDown(this.fullscreenKey)) {
       this.toggleFullscreen();
     }
 
