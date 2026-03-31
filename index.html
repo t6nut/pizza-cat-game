@@ -43,7 +43,7 @@
     <script type="module" src="src/main.js"></script>
     <script>
       // Mobile control state – read by catPhysics.js via window._mobile
-      window._mobile = { left: false, right: false, jumpJustDown: false, lightJustDown: false, menuJustDown: false };
+      window._mobile = { left: false, right: false, jumpJustDown: false, jumpHeld: false, lightJustDown: false, menuJustDown: false };
 
       function _toggleFS() {
         var doc = window.document;
@@ -61,7 +61,7 @@
 
       wireCtrl('btn-left',  function() { window._mobile.left  = true;  }, function() { window._mobile.left  = false; });
       wireCtrl('btn-right', function() { window._mobile.right = true;  }, function() { window._mobile.right = false; });
-      wireCtrl('btn-jump',  function() { window._mobile.jumpJustDown  = true; }, function() {});
+      wireCtrl('btn-jump',  function() { window._mobile.jumpJustDown = true; window._mobile.jumpHeld = true; }, function() { window._mobile.jumpHeld = false; });
       wireCtrl('btn-light', function() { window._mobile.lightJustDown = true; }, function() {});
       wireCtrl('btn-menu',  function() { window._mobile.menuJustDown  = true; }, function() {});
       wireCtrl('btn-fullscreen', function() { _toggleFS(); }, function() {});

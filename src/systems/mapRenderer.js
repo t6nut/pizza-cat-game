@@ -94,10 +94,15 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
       });
     }
   } else if (mapKey === 'desert') {
-    const sun = scene.add.circle(930, 72, 38, 0xfff1a0, 0.92).setDepth(2);
-    // Sun shimmer halo
-    const sunHalo = scene.add.circle(930, 72, 56, 0xffe980, 0.18).setDepth(2);
-    scene.backgroundElements.push(sunHalo, sun);
+    const isDesertNight = scene.currentThemeKey === 'night';
+    if (!isDesertNight) {
+      const sunHalo = scene.add.circle(930, 72, 56, 0xffe980, 0.18).setDepth(2);
+      const sun = scene.add.circle(930, 72, 38, 0xfff1a0, 0.92).setDepth(2);
+      scene.backgroundElements.push(sunHalo, sun);
+    } else {
+      const moon = scene.add.circle(930, 72, 32, 0xeaf4ff, 0.9).setDepth(2);
+      scene.backgroundElements.push(moon);
+    }
 
     // Wavy sand hills using polygon graphics
     const sandHills = scene.add.graphics().setDepth(2);
@@ -190,6 +195,18 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
       scene.backgroundElements.push(stem, armL, armLTop, armR, armRTop);
     }
   } else if (mapKey === 'beach') {
+    const isBeachNight = scene.currentThemeKey === 'night';
+
+    // Celestial body
+    if (!isBeachNight) {
+      const sunHalo = scene.add.circle(980, 72, 50, 0xffe980, 0.18).setDepth(2);
+      const sun = scene.add.circle(980, 72, 34, 0xfff1a0, 0.92).setDepth(2);
+      scene.backgroundElements.push(sunHalo, sun);
+    } else {
+      const moon = scene.add.circle(980, 72, 28, 0xeaf4ff, 0.92).setDepth(2);
+      scene.backgroundElements.push(moon);
+    }
+
     const sea = scene.add.rectangle(worldWidth / 2, worldHeight * 0.58, worldWidth, worldHeight * 0.64, 0x4fc4dc, 0.6).setDepth(2);
     scene.backgroundElements.push(sea);
 
@@ -227,57 +244,99 @@ export function applyMap(scene, mapKey, worldWidth, worldHeight) {
       scene.backgroundElements.push(towel, body, head);
     }
 
-    // People swimming in the water with animated arms
+    // Swimmers with circular arm strokes and body orbiting in larger ellipses
     const swimmerDefs = [
-      { x: 300, y: worldHeight * 0.46, color: 0xf5c49c, drift: 28 },
-      { x: 620, y: worldHeight * 0.50, color: 0xd4916c, drift: -22 },
-      { x: 940, y: worldHeight * 0.44, color: 0xf0b888, drift: 25 },
+      { cx: 300, cy: Math.round(worldHeight * 0.46), color: 0xf5c49c },
+      { cx: 620, cy: Math.round(worldHeight * 0.50), color: 0xd4916c },
+      { cx: 940, cy: Math.round(worldHeight * 0.44), color: 0xf0b888 },
     ];
     for (const sw of swimmerDefs) {
-      const swimHead = scene.add.circle(sw.x, sw.y, 5, sw.color, 0.9).setDepth(3);
-      const swimBody = scene.add.ellipse(sw.x, sw.y + 7, 10, 8, sw.color, 0.75).setDepth(3);
-      // Left arm reaching forward
-      const armL = scene.add.ellipse(sw.x - 9, sw.y + 3, 14, 4, sw.color, 0.8).setDepth(3);
-      // Right arm
-      const armR = scene.add.ellipse(sw.x + 9, sw.y + 3, 14, 4, sw.color, 0.8).setDepth(3);
-      // Hands (small circles at ends of arms)
-      const handL = scene.add.circle(sw.x - 15, sw.y + 3, 3, sw.color, 0.85).setDepth(3);
-      const handR = scene.add.circle(sw.x + 15, sw.y + 3, 3, sw.color, 0.85).setDepth(3);
-      const group = [swimHead, swimBody, armL, armR, handL, handR];
-      scene.backgroundElements.push(...group);
-      // Bob up and down
-      scene.tweens.add({ targets: group, y: '-=5', duration: 900 + Phaser.Math.Between(0, 300), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      // Swim sideways
-      const swimDist = sw.drift;
-      scene.tweens.add({ targets: group, x: `+=${swimDist}`, duration: 2800 + Phaser.Math.Between(0, 600), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      // Alternate arm stroke — left arm goes forward when right goes back
-      scene.tweens.add({ targets: armL, y: '-=6', duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      scene.tweens.add({ targets: armR, y: '+=6', duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 });
-      scene.tweens.add({ targets: handL, y: '-=6', duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      scene.tweens.add({ targets: handR, y: '+=6', duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 });
+      const swimHead = scene.add.circle(sw.cx, sw.cy, 5, sw.color, 0.9).setDepth(3);
+      const swimBody = scene.add.ellipse(sw.cx, sw.cy + 7, 10, 8, sw.color, 0.75).setDepth(3);
+      const armL = scene.add.ellipse(sw.cx - 9, sw.cy + 3, 14, 4, sw.color, 0.8).setDepth(3);
+      const armR = scene.add.ellipse(sw.cx + 9, sw.cy + 3, 14, 4, sw.color, 0.8).setDepth(3);
+      const handL = scene.add.circle(sw.cx - 15, sw.cy + 3, 3, sw.color, 0.85).setDepth(3);
+      const handR = scene.add.circle(sw.cx + 15, sw.cy + 3, 3, sw.color, 0.85).setDepth(3);
+      scene.backgroundElements.push(swimHead, swimBody, armL, armR, handL, handR);
+
+      // Body orbits in a larger ellipse around the center point
+      const orbitStartAngle = Phaser.Math.Between(0, 359);
+      scene.tweens.addCounter({
+        from: orbitStartAngle, to: orbitStartAngle + 360,
+        duration: 5000 + Phaser.Math.Between(-600, 600), repeat: -1, ease: 'Linear',
+        onUpdate: (tw) => {
+          const a = Phaser.Math.DegToRad(tw.getValue());
+          swimHead.x = sw.cx + Math.cos(a) * 40;
+          swimHead.y = sw.cy + Math.sin(a) * 14;
+          swimBody.x = swimHead.x;
+          swimBody.y = swimHead.y + 7;
+        },
+      });
+
+      // Arms rotate in circles (freestyle swimming stroke)
+      const armStartAngle = Phaser.Math.Between(0, 359);
+      scene.tweens.addCounter({
+        from: armStartAngle, to: armStartAngle + 360,
+        duration: 1100 + Phaser.Math.Between(-100, 100), repeat: -1, ease: 'Linear',
+        onUpdate: (tw) => {
+          const a = Phaser.Math.DegToRad(tw.getValue());
+          armL.x  = swimHead.x + Math.cos(a + Math.PI) * 11;
+          armL.y  = swimHead.y + Math.sin(a + Math.PI) * 7 + 3;
+          armR.x  = swimHead.x + Math.cos(a) * 11;
+          armR.y  = swimHead.y + Math.sin(a) * 7 + 3;
+          handL.x = swimHead.x + Math.cos(a + Math.PI) * 17;
+          handL.y = swimHead.y + Math.sin(a + Math.PI) * 11 + 3;
+          handR.x = swimHead.x + Math.cos(a) * 17;
+          handR.y = swimHead.y + Math.sin(a) * 11 + 3;
+        },
+      });
     }
 
-    // Surfer being chased by a shark
+    // Surfer with swim pants and larger rounded board, chased by shark fin
     const surferStartX = worldWidth + 80;
-    const surferY = worldHeight * 0.42;
-    const surfBoard = scene.add.rectangle(surferStartX, surferY + 4, 30, 6, 0xf5f5dc, 0.9).setDepth(3);
-    const surferBody = scene.add.rectangle(surferStartX, surferY - 6, 8, 16, 0xf0b888, 0.9).setDepth(3);
+    const surferY = Math.round(worldHeight * 0.42);
+
+    // Larger rounded surfboard (drawn in local coords centered at origin)
+    const surfBoardGfx = scene.add.graphics().setDepth(3);
+    surfBoardGfx.fillStyle(0xf5f5dc, 0.92);
+    surfBoardGfx.fillRoundedRect(-30, -5, 60, 10, 5);
+    surfBoardGfx.x = surferStartX;
+    surfBoardGfx.y = surferY + 4;
+
+    // Torso
+    const surferTorso = scene.add.rectangle(surferStartX, surferY - 8, 8, 12, 0xf0b888, 0.9).setDepth(3);
+    // Swim pants (bright blue shorts at waist)
+    const swimPants = scene.add.rectangle(surferStartX, surferY + 1, 10, 8, 0x1a6bb5, 0.95).setDepth(3);
+    // Head
     const surferHead = scene.add.circle(surferStartX, surferY - 16, 5, 0xf0b888, 0.95).setDepth(3);
-    scene.backgroundElements.push(surfBoard, surferBody, surferHead);
+    scene.backgroundElements.push(surfBoardGfx, surferTorso, swimPants, surferHead);
 
-    const sharkX = surferStartX + 100;
-    const sharkBody = scene.add.triangle(sharkX, surferY + 2, 0, 8, 30, 0, 30, 16, 0x6a7b8d, 0.9).setDepth(3);
-    const sharkFin = scene.add.triangle(sharkX + 10, surferY - 8, 0, 12, 6, 0, 12, 12, 0x5a6b7d, 0.95).setDepth(3);
-    scene.backgroundElements.push(sharkBody, sharkFin);
+    // Shark — fin only, 2× bigger
+    const sharkFin = scene.add.triangle(
+      surferStartX + 120, surferY - 12,
+      0, 24, 12, 0, 24, 24,
+      0x5a6b7d, 0.95,
+    ).setDepth(3);
+    scene.backgroundElements.push(sharkFin);
 
-    // Animate surfer + shark looping across screen
-    const surferTargets = [surfBoard, surferBody, surferHead];
-    const sharkTargets = [sharkBody, sharkFin];
+    const surferTargets = [surfBoardGfx, surferTorso, swimPants, surferHead];
     const loopSurfer = () => {
-      for (const t of surferTargets) { t.x = worldWidth + 80; }
-      for (const t of sharkTargets) { t.x = worldWidth + 180; }
-      scene.tweens.add({ targets: surferTargets, x: '-=' + (worldWidth + 200), duration: 8000, ease: 'Linear',
-        onUpdate: () => { surferBody.x = surfBoard.x; surferHead.x = surfBoard.x; sharkBody.x = surfBoard.x + 100; sharkFin.x = surfBoard.x + 110; },
+      surfBoardGfx.x = worldWidth + 80;
+      surferTorso.x  = worldWidth + 80;
+      swimPants.x    = worldWidth + 80;
+      surferHead.x   = worldWidth + 80;
+      sharkFin.x     = worldWidth + 200;
+      scene.tweens.add({
+        targets: surferTargets,
+        x: '-=' + (worldWidth + 200),
+        duration: 8000,
+        ease: 'Linear',
+        onUpdate: () => {
+          surferTorso.x = surfBoardGfx.x;
+          swimPants.x   = surfBoardGfx.x;
+          surferHead.x  = surfBoardGfx.x;
+          sharkFin.x    = surfBoardGfx.x + 120;
+        },
         onComplete: () => { scene.time.delayedCall(Phaser.Math.Between(2000, 5000), loopSurfer); },
       });
     };

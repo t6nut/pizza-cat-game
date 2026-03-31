@@ -425,6 +425,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     document.body.classList.toggle('game-ui-active', active);
+    document.body.classList.toggle('has-enemies', active && this.currentEnemyType !== 'off');
   }
 
   resumeAudio() {
@@ -554,10 +555,16 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.lightToggleKey) ||
-        (window._mobile?.lightJustDown && ((window._mobile.lightJustDown = false) || true))) {
-      this.flashlightOn = !this.flashlightOn;
-      this.updateHud();
+    if (this.currentEnemyType !== 'off') {
+      if (Phaser.Input.Keyboard.JustDown(this.lightToggleKey) ||
+          (window._mobile?.lightJustDown && ((window._mobile.lightJustDown = false) || true))) {
+        this.flashlightOn = !this.flashlightOn;
+        this.updateHud();
+      }
+    } else {
+      // consume and discard the flag even when disabled
+      if (window._mobile?.lightJustDown) window._mobile.lightJustDown = false;
+      this.flashlightOn = false;
     }
 
     // Snapshot velocity before physics step so the stomp callback has reliable data.

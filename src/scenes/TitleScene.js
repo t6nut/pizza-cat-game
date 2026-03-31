@@ -235,6 +235,7 @@ export class TitleScene extends Phaser.Scene {
 
     this.menuJetpack = this.add.graphics().setDepth(7);
     this.menuJetpackFlames = this.add.graphics().setDepth(6);
+    this.menuHelmetGfx = this.add.graphics().setDepth(21);
   }
 
   updateMenuBackdrop() {
@@ -266,15 +267,16 @@ export class TitleScene extends Phaser.Scene {
       }
     }
 
-    // Overlay: clouds / stars / sun / moon
+    // Overlay: clouds / stars – sun/moon are drawn by applyMap per-map
     for (let i = 0; i < this.menuClouds.length; i += 1) {
       this.menuClouds[i].setVisible(!isNight && !isMoon);
     }
     for (let i = 0; i < this.menuStars.length; i += 1) {
       this.menuStars[i].setVisible(isNight);
     }
-    this.menuSun.setVisible(!isNight && !isMoon);
-    this.menuMoon.setVisible(isNight);
+    // applyMap now draws its own sun/moon for each map, hide the backdrop defaults
+    this.menuSun.setVisible(false);
+    this.menuMoon.setVisible(false);
 
     if (this.heli) {
       this.heli.setTexture(isMoon ? 'ufoSprite' : 'pizzaOven');
@@ -395,8 +397,38 @@ export class TitleScene extends Phaser.Scene {
         this.optionButtons['character'].push({ key, box, text: tx, onSelect: applyCharacterSelection });
       });
 
-      // ---------- THEME (left) + ENEMIES (right) – same row ----------
-      mlbl(240, 420, 'Theme');
+      // ---------- ENEMIES – vertical column, top-right corner ----------
+      mlbl(1150, 228, 'Enemies');
+      this.optionButtons['enemies'] = [];
+      const enemyKeys = ['zombies', 'vampires', 'off'];
+      const enemyColX   = 1150;
+      const enemyColY0  = 264;
+      const enemyColStep = 52;
+      enemyKeys.forEach((key, i) => {
+        const ey = enemyColY0 + i * enemyColStep;
+        const box = this.add.rectangle(enemyColX, ey, 168, btnH, 0x283c5c, 1)
+          .setDepth(17).setStrokeStyle(2, 0x89b8ff, 0.7);
+        box.selected = false;
+        const tx = this.add.text(enemyColX, ey, ENEMY_OPTIONS[key].label, {
+          ...TEXT_STYLE, fontSize: btnFont, color: '#e2f0ff', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(18);
+        box.setInteractive({ useHandCursor: true });
+        box.on('pointerover', () => { if (!box.selected) box.setFillStyle(0x33517a); });
+        box.on('pointerout',  () => { if (!box.selected) box.setFillStyle(0x283c5c); });
+        box.on('pointerdown', () => {
+          const row = this.optionButtons['enemies'];
+          for (let j = 0; j < row.length; j += 1) { row[j].box.selected = false; row[j].box.setFillStyle(0x283c5c); }
+          box.selected = true;
+          box.setFillStyle(0x3b8a5f);
+          this.selectedEnemyType = key;
+          this.selectedZombies = key === 'off' ? 'off' : 'on';
+          this.updateStartButtonState();
+        });
+        this.optionButtons['enemies'].push({ key, box, text: tx, onSelect: (v) => { this.selectedEnemyType = v; this.selectedZombies = v === 'off' ? 'off' : 'on'; } });
+      });
+
+      // ---------- THEME ----------
+      mlbl(320, 420, 'Theme');
       this.createOptionRow('theme', ['day', 'night'], THEME_OPTIONS, 454, (value) => {
         if (this.selectedMap === 'moon' && value === 'day') {
           this.selectOption('theme', 'night');
@@ -404,13 +436,7 @@ export class TitleScene extends Phaser.Scene {
         }
         this.selectedTheme = value;
         this.updateMenuBackdrop();
-      }, 240, 136, 122, btnH, btnFont);
-
-      mlbl(700, 420, 'Enemies');
-      this.createOptionRow('enemies', ['zombies', 'vampires', 'off'], ENEMY_OPTIONS, 454, (value) => {
-        this.selectedEnemyType = value;
-        this.selectedZombies = value === 'off' ? 'off' : 'on';
-      }, 700, 162, 148, btnH, btnFont);
+      }, 320, 136, 122, btnH, btnFont);
 
       // ---------- MAP ----------
       mlbl(panelCX, 506, 'Map');
@@ -657,6 +683,28 @@ export class TitleScene extends Phaser.Scene {
 
   update(time) {
     this.updateMenuJetpack(time);
+    this.updateMenuHelmet();
+  }
+
+  updateMenuHelmet() {
+    if (!this.menuHelmetGfx || !this.charPreviewSprite) {
+      return;
+    }
+    this.menuHelmetGfx.clear();
+    if (this.selectedMap !== 'moon') {
+      return;
+    }
+    // Scale-3 sprite: head center is roughly sprite.y - 9
+    const x = this.charPreviewSprite.x;
+    const y = this.charPreviewSprite.y - 9;
+    const rX = 36; // 12 * 3
+    const rY = 30; // 10 * 3
+    this.menuHelmetGfx.fillStyle(0xd9ecff, 0.22);
+    this.menuHelmetGfx.fillEllipse(x, y, rX * 2.1, rY * 2.1);
+    this.menuHelmetGfx.lineStyle(2, 0xeaf6ff, 0.9);
+    this.menuHelmetGfx.strokeEllipse(x, y, rX * 2.1, rY * 2.1);
+    this.menuHelmetGfx.fillStyle(0xeaf6ff, 0.35);
+    this.menuHelmetGfx.fillEllipse(x - 12, y - 12, 15, 9);
   }
 
   _loadMenuPrefs() {
