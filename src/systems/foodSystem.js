@@ -232,13 +232,19 @@ export function consumeFood(scene, food) {
     const airborneSlice = food?.sourceType === 'slice' && !food?.onGround;
     if (airborneSlice) {
       scene.slicesEatenForBonus += 1;
-      if (scene.slicesEatenForBonus % 5 === 0) {
+      scene.bonusSlicesCollected = (scene.bonusSlicesCollected || 0) + 1;
+      if (scene.bonusSlicesCollected >= 5) {
+        scene.bonusSlicesCollected -= 5;
+        scene.bonusPizzaFullUntil = scene.time.now + 650;
         scene.pendingBonusFlyovers += 1;
+        scene.updateHud();
         if (!scene.airplaneActive) {
           scene.pendingBonusFlyovers -= 1;
           scene.launchAirplaneBigPizza();
           scene.showCatchPopup(scene.kitten.x, scene.kitten.y - 64 * scene.sizeMultiplier, 'BONUS FLYOVER!');
         }
+      } else {
+        scene.updateHud();
       }
     }
   }

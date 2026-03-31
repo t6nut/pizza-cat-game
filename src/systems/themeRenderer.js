@@ -3,6 +3,7 @@ export function applyTheme(scene, themeKey, worldWidth) {
   scene.currentThemeKey = themeKey;
   if (scene.currentMapKey !== 'moon') {
     scene.bgGround.setAlpha(1);
+    scene.bgGround.setVisible(true);
   }
   scene.applyMap(scene.currentMapKey);
 
@@ -45,6 +46,9 @@ export function applyTheme(scene, themeKey, worldWidth) {
     scene.bgSky.setFillStyle(scene.currentMapKey === 'moon' ? 0x0c1330 : theme.skyColor, 0.92);
     if (scene.currentMapKey === 'beach') {
       scene.bgGround.setFillStyle(0x7b6b4d, 1);
+    } else if (scene.currentMapKey === 'moon') {
+      scene.bgGround.setVisible(false);
+      scene.bgGround.setAlpha(0);
     }
   } else if (scene.currentMapKey !== 'moon') {
     for (let i = 0; i < 11; i += 1) {

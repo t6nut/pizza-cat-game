@@ -132,6 +132,8 @@ export class MainScene extends Phaser.Scene {
     this.kittenExtraGravity = 300;
     this.moonWrapEnabled = false;
     this.slicesEatenForBonus = 0;
+    this.bonusSlicesCollected = 0;
+    this.bonusPizzaFullUntil = 0;
     this.pendingBonusFlyovers = 0;
     this.musicEvent = null;
     this.musicStep = 0;
@@ -178,6 +180,8 @@ export class MainScene extends Phaser.Scene {
       this.jumpVelocity = -330;
       this.kittenExtraGravity = 300;
       this.moonWrapEnabled = false;
+      this.bonusSlicesCollected = 0;
+      this.bonusPizzaFullUntil = 0;
     }
   }
 
@@ -188,6 +192,8 @@ export class MainScene extends Phaser.Scene {
     this.ground = this.physics.add.staticImage(WORLD_WIDTH / 2, WORLD_HEIGHT - 20, null);
     this.ground.displayWidth = WORLD_WIDTH;
     this.ground.displayHeight = 40;
+    this.ground.setVisible(false);
+    this.ground.setAlpha(0);
     this.ground.refreshBody();
 
     this.kittenSkin = CHARACTER_SKINS[this.currentCharacterKey] || CHARACTER_SKINS.orange;
