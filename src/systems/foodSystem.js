@@ -69,9 +69,8 @@ export function launchAirplaneBigPizza(scene, worldWidth) {
   scene.pizzaPlane.setVisible(true);
   scene.pizzaPlane.setPosition(startX, 125 + Phaser.Math.Between(-12, 12));
   scene.pizzaPlane.setFlipX(!fromLeft);
-  scene.playAirplaneSound();
-
   const duration = Math.round(2600 * mode.airplaneDurationScale);
+  scene.playAirplaneSound(duration);
   scene.tweens.add({
     targets: scene.pizzaPlane,
     x: endX,

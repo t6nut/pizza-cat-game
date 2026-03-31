@@ -113,24 +113,27 @@ export function playEatSound(scene, strength) {
   osc.stop(now + 0.13);
 }
 
-export function playAirplaneSound(scene) {
+export function playAirplaneSound(scene, durationMs = 2800) {
   if (!scene.audioCtx) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
   const gain = scene.audioCtx.createGain();
   const now = scene.audioCtx.currentTime;
+  const duration = Math.max(1.2, durationMs / 1000);
+  const attack = Math.min(0.22, duration * 0.12);
+  const sustainLevel = 0.03;
   osc.type = 'sawtooth';
   osc.frequency.setValueAtTime(84, now);
-  osc.frequency.linearRampToValueAtTime(68, now + 1.05);
+  osc.frequency.linearRampToValueAtTime(68, now + duration * 0.9);
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.linearRampToValueAtTime(0.045, now + 0.18);
-  gain.gain.linearRampToValueAtTime(0.028, now + 0.92);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.12);
+  gain.gain.linearRampToValueAtTime(0.045, now + attack);
+  gain.gain.linearRampToValueAtTime(sustainLevel, now + Math.max(attack + 0.05, duration - 0.22));
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   osc.connect(gain);
   gain.connect(scene.audioCtx.destination);
   osc.start(now);
-  osc.stop(now + 1.15);
+  osc.stop(now + duration + 0.03);
 }
 
 export function playDogBarkSound(scene) {

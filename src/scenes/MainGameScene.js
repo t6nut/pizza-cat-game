@@ -279,6 +279,8 @@ export class MainScene extends Phaser.Scene {
       this.ovenFlameTime = 0;
       this.chefTossGfx = this.add.graphics().setDepth(7);
       this.chefTossUntil = 0;
+      this.planePropellerGfx = this.add.graphics().setDepth(6);
+      this.planeScarfGfx = this.add.graphics().setDepth(6);
     }
     this.rocketShadow = this.add.ellipse(this.pizzaPlane.x, this.getGroundSurfaceY(), 88, 20, 0x000000, 0.16).setDepth(4).setVisible(false);
     this.createAstronautHelmet();
@@ -454,8 +456,8 @@ export class MainScene extends Phaser.Scene {
     playCatEatSound(this, strength);
   }
 
-  playAirplaneSound() {
-    playPlaneSound(this);
+  playAirplaneSound(durationMs) {
+    playPlaneSound(this, durationMs);
   }
 
   playDogBarkSound() {
@@ -640,9 +642,59 @@ export class MainScene extends Phaser.Scene {
     this.updateFlashlightPosition();
     this.updateZombieLightEffect(delta);
     this.updateZombieGroundingAndAccessories();
+    this.updatePlaneAccessories();
     this.updateShadows();
     this.drawJetpackVisual(jetpackActive);
     this.updateAstronautHelmet();
+  }
+
+  updatePlaneAccessories() {
+    if (!this.planePropellerGfx || !this.planeScarfGfx) {
+      return;
+    }
+
+    const prop = this.planePropellerGfx;
+    const scarf = this.planeScarfGfx;
+    prop.clear();
+    scarf.clear();
+
+    if (this.currentMapKey === 'moon' || !this.pizzaPlane.visible) {
+      return;
+    }
+
+    const dir = this.pizzaPlane.flipX ? -1 : 1;
+    const scaleX = this.pizzaPlane.displayWidth / 120;
+    const scaleY = this.pizzaPlane.displayHeight / 48;
+    const noseX = this.pizzaPlane.x + dir * 48 * scaleX;
+    const noseY = this.pizzaPlane.y - 1 * scaleY;
+    const spin = this.time.now * 0.055;
+
+    prop.lineStyle(Math.max(2, 2.2 * scaleX), 0x1a1a1a, 0.78);
+    prop.beginPath();
+    prop.moveTo(noseX - Math.cos(spin) * 10 * scaleX, noseY - Math.sin(spin) * 10 * scaleY);
+    prop.lineTo(noseX + Math.cos(spin) * 10 * scaleX, noseY + Math.sin(spin) * 10 * scaleY);
+    prop.moveTo(noseX - Math.cos(spin + Math.PI / 2) * 8 * scaleX, noseY - Math.sin(spin + Math.PI / 2) * 8 * scaleY);
+    prop.lineTo(noseX + Math.cos(spin + Math.PI / 2) * 8 * scaleX, noseY + Math.sin(spin + Math.PI / 2) * 8 * scaleY);
+    prop.strokePath();
+    prop.fillStyle(0xa36f3c, 0.95);
+    prop.fillCircle(noseX, noseY, 2.3 * scaleX);
+
+    const scarfBaseX = this.pizzaPlane.x + dir * 4 * scaleX;
+    const scarfBaseY = this.pizzaPlane.y + 1 * scaleY;
+    const wave = Math.sin(this.time.now * 0.015) * 3.5 * scaleY;
+    const tailDir = -dir;
+    const stripeColors = [0xd92e2e, 0xf4f0e6, 0xd92e2e, 0xf4f0e6, 0xd92e2e];
+    for (let i = 0; i < stripeColors.length; i += 1) {
+      const segStartX = scarfBaseX + tailDir * (i * 6) * scaleX;
+      const segEndX = scarfBaseX + tailDir * ((i + 1) * 6) * scaleX;
+      const segStartY = scarfBaseY + Math.sin(this.time.now * 0.015 + i * 0.7) * wave * 0.35;
+      const segEndY = scarfBaseY + Math.sin(this.time.now * 0.015 + (i + 1) * 0.7) * wave * 0.55;
+      scarf.lineStyle(Math.max(3, 3.2 * scaleY), stripeColors[i], 0.96);
+      scarf.beginPath();
+      scarf.moveTo(segStartX, segStartY);
+      scarf.lineTo(segEndX, segEndY);
+      scarf.strokePath();
+    }
   }
 
   updateShadows() {
@@ -705,18 +757,15 @@ export class MainScene extends Phaser.Scene {
         g.fillCircle(handX, handY, 4);
 
         const mouthX = this.chefHeli.x + (152 - 95) * 0.7;
-        const mouthY = this.chefHeli.y + (103 - 70) * 0.7 + swing * 1.2;
+        const mouthY = this.chefHeli.y + (95 - 70) * 0.7 + swing * 0.8;
         const mouthW = 10 + swing * 5;
-        const mouthH = 4 + swing * 3;
+        const mouthH = 5 + swing * 3;
         g.fillStyle(0x220703, 0.98);
         g.fillEllipse(mouthX, mouthY, mouthW, mouthH);
         g.fillStyle(0xffffff, 0.95);
-        g.fillRect(mouthX - mouthW * 0.34, mouthY - mouthH * 0.52, mouthW * 0.68, 1.5);
-        g.fillStyle(0x2a140e, 0.9);
-        g.fillRect(mouthX - mouthW * 0.34, mouthY - mouthH * 0.58, mouthW * 0.68, 0.7);
-        g.fillStyle(0xffffff, 0.95);
-        g.fillTriangle(mouthX - 2.8, mouthY - 0.2, mouthX - 1.5, mouthY - 0.2, mouthX - 2.15, mouthY + 2.8);
-        g.fillTriangle(mouthX + 1.5, mouthY - 0.2, mouthX + 2.8, mouthY - 0.2, mouthX + 2.15, mouthY + 2.8);
+        g.fillRoundedRect(mouthX - mouthW * 0.34, mouthY - mouthH * 0.52, mouthW * 0.68, 1.7, 0.5);
+        g.fillStyle(0xd43a48, 0.92);
+        g.fillEllipse(mouthX, mouthY + mouthH * 0.2, mouthW * 0.42, mouthH * 0.46);
 
         // Tossed slice follows hand with a slight lead and spin.
         const sliceX = handX + 5 + swing * 4;

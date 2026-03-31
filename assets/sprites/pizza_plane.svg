@@ -1,19 +1,102 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 30" shape-rendering="crispEdges">
-  <rect width="84" height="30" fill="none"/>
-  <rect x="6" y="12" width="48" height="8" fill="#e3edf5"/>
-  <rect x="50" y="14" width="20" height="4" fill="#e3edf5"/>
-  <rect x="4" y="14" width="8" height="4" fill="#e3edf5"/>
-  <rect x="24" y="6" width="16" height="6" fill="#5a97c7"/>
-  <rect x="16" y="20" width="28" height="6" fill="#5a97c7"/>
-  <rect x="56" y="10" width="10" height="3" fill="#ff8f57"/>
-  <rect x="56" y="19" width="10" height="3" fill="#ff8f57"/>
-  <rect x="7" y="13" width="3" height="6" fill="#5a97c7"/>
-  <rect x="31" y="13" width="9" height="3" fill="#1e4159"/>
-  <rect x="33" y="9" width="10" height="8" fill="#ba8f5a"/>
-  <rect x="35" y="7" width="3" height="3" fill="#8a6035"/>
-  <rect x="40" y="7" width="3" height="3" fill="#8a6035"/>
-  <rect x="37" y="11" width="1" height="1" fill="#20180f"/>
-  <rect x="40" y="11" width="1" height="1" fill="#20180f"/>
-  <rect x="38" y="13" width="2" height="1" fill="#f4dbc5"/>
-  <rect x="39" y="14" width="1" height="2" fill="#ff6a88"/>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 22.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" shape-rendering="crispEdges"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 120 48"
+	 style="enable-background:new 0 0 120 48;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#AF3B38;}
+	.st1{fill:#7A6550;}
+	.st2{fill:#1A1A1A;}
+	.st3{fill:#F0F0F0;}
+	.st4{fill:#6A563E;}
+	.st5{fill:none;}
+	.st6{fill:#F3EFE8;}
+	.st7{fill:#D24B40;}
+	.st8{fill:#F1EDE5;}
+	.st9{fill:#F7F4EE;}
+	.st10{fill:#EED2A6;}
+	.st11{fill:#D3A06D;}
+	.st12{fill:#9C7747;}
+	.st13{fill:#C4473D;}
+	.st14{fill:#8FE1FF;}
+	.st15{fill:#6BC8F0;}
+	.st16{fill:#D92E2E;}
+	.st17{fill:#F4F0E6;}
+	.st18{fill:#B98755;}
+	.st19{fill:#F6F6F6;}
+	.st20{fill:#ECECEC;}
+	.st21{fill:#B9865F;}
+	.st22{fill:#D9AA7A;}
+	.st23{fill:#111111;}
+	.st24{fill:#FFFFFF;}
+	.st25{fill:#52331F;}
+	.st26{fill:#7EA8CC;}
+	.st27{fill:#CB473D;}
+	.st28{fill:#8A6035;}
+</style>
+<polygon class="st0" points="103.8,43.8 82.5,4.2 61.3,4.2 76.4,43.8 "/>
+<rect x="62.7" y="-5.2" class="st1" width="0.5" height="11"/>
+<g>
+	<g>
+		<circle class="st2" cx="53.3" cy="36.3" r="3.7"/>
+		<circle class="st3" cx="53.3" cy="36.3" r="1.8"/>
+	</g>
+	<rect x="52.6" y="31.4" class="st4" width="1.4" height="4.1"/>
+</g>
+<rect class="st5" width="120" height="48"/>
+<rect x="8" y="22" class="st6" width="25" height="4"/>
+<rect x="7.6" y="21" class="st7" width="18" height="1"/>
+<rect x="7.6" y="26" class="st7" width="18" height="1"/>
+<rect x="4.5" y="26.4" transform="matrix(0.4755 -0.8797 0.8797 0.4755 -21.0762 23.2971)" class="st7" width="9" height="5.8"/>
+<rect x="6.3" y="12" transform="matrix(0.9573 -0.2892 0.2892 0.9573 -4.5467 3.6517)" class="st7" width="7.7" height="10.5"/>
+<rect x="24" y="18" class="st8" width="50" height="12"/>
+<rect x="30" y="16" class="st9" width="42" height="16"/>
+<rect x="72" y="17" class="st9" width="18" height="14"/>
+<rect x="90" y="16" class="st10" width="10" height="16"/>
+<rect x="100" y="15" class="st11" width="8" height="18"/>
+<rect x="108" y="18" class="st12" width="5" height="12"/>
+<rect x="27" y="20" class="st13" width="6" height="2"/>
+<rect x="27" y="26" class="st13" width="6" height="2"/>
+<rect x="89" y="14" class="st1" width="2" height="8"/>
+<rect x="98.6" y="13" class="st1" width="0.8" height="8"/>
+<rect x="101" y="9.2" class="st1" width="1" height="8"/>
+<g>
+	<rect x="62" y="31.5" class="st4" width="2" height="7"/>
+	<g>
+		<circle class="st2" cx="63" cy="39.5" r="5"/>
+		<circle class="st3" cx="63" cy="39.5" r="2.5"/>
+	</g>
+</g>
+<polygon class="st14" points="47,14 68,12 77,18 52,20 "/>
+<polygon class="st15" points="49,15 67,13 73,17 53,18 "/>
+<rect x="50" y="19" class="st16" width="3" height="2"/>
+<rect x="47" y="20" class="st17" width="3" height="2"/>
+<rect x="44" y="21" class="st16" width="3" height="2"/>
+<ellipse class="st18" cx="108.5" cy="24" rx="7" ry="9"/>
+<g>
+	<g>
+		<rect x="56" y="9" class="st19" width="7" height="1"/>
+		<rect x="55" y="10" class="st19" width="9" height="2"/>
+		<rect x="57" y="12" class="st20" width="5" height="1"/>
+		<rect x="54" y="13" class="st21" width="2" height="2"/>
+		<rect x="63" y="13" class="st21" width="2" height="2"/>
+		<rect x="56" y="13" class="st22" width="7" height="5"/>
+	</g>
+	<rect x="57.3" y="15.1" class="st23" width="5.2" height="0.6"/>
+	<rect x="58.4" y="14" class="st24" width="1" height="1"/>
+	<rect x="60.9" y="14" class="st24" width="1" height="1"/>
+	<rect x="59.4" y="15.9" class="st25" width="1.2" height="1"/>
+	<rect x="57.3" y="13.2" class="st23" width="5.2" height="0.6"/>
+	<rect x="62" y="13.8" class="st23" width="0.5" height="1.4"/>
+	<rect x="57.3" y="13.7" class="st23" width="0.5" height="1.4"/>
+	<rect x="59.6" y="13.8" class="st23" width="0.5" height="1.4"/>
+	<rect x="56" y="14.1" class="st23" width="1.3" height="0.5"/>
+	<rect x="62.5" y="14.1" class="st23" width="0.5" height="0.5"/>
+	<rect x="58.7" y="14.3" class="st26" width="0.7" height="0.7"/>
+	<rect x="61.1" y="14.3" class="st26" width="0.7" height="0.7"/>
+</g>
+<rect x="77.8" y="31.5" class="st1" width="0.5" height="11"/>
+<rect x="101.5" y="31.5" class="st1" width="0.5" height="11"/>
+<polygon class="st27" points="105.3,34.4 84,-5.2 62.8,-5.2 77.9,34.4 "/>
+<ellipse class="st28" cx="109.6" cy="24" rx="1.6" ry="2"/>
 </svg>

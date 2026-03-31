@@ -303,13 +303,26 @@ export function updateZombieGroundingAndAccessories(scene) {
       }
       const umb = zombie.umbrella;
       const x = zombie.body.center.x;
-      const y = groundTop - 18 * (zombie.growthScale || 1);
       const scale = Math.max(1, zombie.growthScale || 1);
+      const y = groundTop - 31 * scale;
+      const canopyW = 40 * scale;
+      const canopyH = 16 * scale;
+      const handleX = x + 6 * scale;
+      const shaftTopY = y + 1 * scale;
+      const shaftBottomY = y + 22 * scale;
       umb.clear();
       umb.fillStyle(0x1f1f1f, 0.95);
-      umb.fillEllipse(x, y, 20 * scale, 8 * scale);
-      umb.fillStyle(0x2f2f2f, 1);
-      umb.fillRect(x - scale, y - 1, 2 * scale, 12 * scale);
+      umb.fillEllipse(x, y, canopyW, canopyH);
+      umb.fillStyle(0x2a2a2a, 0.98);
+      umb.fillEllipse(x, y + canopyH * 0.18, canopyW * 0.88, canopyH * 0.38);
+      umb.lineStyle(Math.max(2, 1.6 * scale), 0x2f2f2f, 1);
+      umb.beginPath();
+      umb.moveTo(handleX, shaftTopY);
+      umb.lineTo(handleX, shaftBottomY);
+      umb.lineTo(handleX + scale, shaftBottomY + 4 * scale);
+      umb.lineTo(handleX - 2 * scale, shaftBottomY + 7 * scale);
+      umb.lineTo(handleX - 7 * scale, shaftBottomY + 6 * scale);
+      umb.strokePath();
     } else if (zombie.umbrella) {
       zombie.umbrella.destroy();
       zombie.umbrella = null;
