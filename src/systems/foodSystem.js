@@ -228,8 +228,8 @@ export function consumeFood(scene, food) {
   scene.showCatchPopup(scene.kitten.x, scene.kitten.y - 45 * scene.sizeMultiplier, popupText);
 
   if (growthValue <= 1) {
-    const airborneSlice = food?.sourceType === 'slice' && !food?.onGround;
-    if (airborneSlice) {
+    const isSlice = food?.sourceType === 'slice';
+    if (isSlice) {
       scene.slicesEatenForBonus += 1;
       scene.bonusSlicesCollected = (scene.bonusSlicesCollected || 0) + 1;
       if (scene.bonusSlicesCollected >= 5) {

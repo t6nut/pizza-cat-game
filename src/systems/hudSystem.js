@@ -7,13 +7,11 @@ export function createHud(scene, worldWidth) {
     strokeThickness: 3,
   };
 
-  scene.scoreText = scene.add.text(20, 20, 'Food: 0', style).setDepth(20);
-  scene.sizeText = scene.add.text(20, 48, 'Size: 1.00x', style).setDepth(20);
-  scene.modeText = scene.add.text(20, 76, 'Mode: --', style).setDepth(20);
-  scene.batteryLabelText = scene.add.text(20, 104, 'Battery', style).setDepth(20);
+  scene.sizeText = scene.add.text(20, 20, 'Size: 1.00x', style).setDepth(20);
+  scene.batteryLabelText = scene.add.text(20, 48, 'Battery', style).setDepth(20);
   scene.batteryBarFrame = scene.add.graphics().setDepth(20);
   scene.batteryBarFill = scene.add.graphics().setDepth(20);
-  scene.fuelLabelText = scene.add.text(20, 132, 'Fuel', style).setDepth(20);
+  scene.fuelLabelText = scene.add.text(20, 76, 'Fuel', style).setDepth(20);
   scene.fuelBarFrame = scene.add.graphics().setDepth(20);
   scene.fuelBarFill = scene.add.graphics().setDepth(20);
 
@@ -121,19 +119,28 @@ export function createHud(scene, worldWidth) {
     .setOrigin(1, 0)
     .setDepth(20);
 
+  const muteBtn = scene.add.text(worldWidth - 20, 48, '[ MUTE ]', {
+    fontFamily: '"Trebuchet MS", "Verdana", sans-serif',
+    fontSize: '18px',
+    color: '#2f1b14',
+    stroke: '#fff8e6',
+    strokeThickness: 3,
+  }).setOrigin(1, 0).setDepth(20).setInteractive({ useHandCursor: true });
+  scene.muteBtn = muteBtn;
+  muteBtn.on('pointerdown', () => {
+    scene.audioMuted = !scene.audioMuted;
+    muteBtn.setText(scene.audioMuted ? '[ UNMUTE ]' : '[ MUTE ]');
+    muteBtn.setStyle({ color: scene.audioMuted ? '#884444' : '#2f1b14' });
+  });
+
   scene.updateHud();
 }
 
-export function updateHud(scene, modeSettings, mapSettings, enemySettings) {
-  const mode = modeSettings[scene.currentModeKey] || modeSettings.medium;
-  const map = mapSettings[scene.currentMapKey] || mapSettings.city;
-  const enemy = enemySettings[scene.currentEnemyType] || enemySettings.off;
-  scene.scoreText.setText(`Food: ${scene.foodPoints}`);
+export function updateHud(scene) {
   scene.sizeText.setText(`Size: ${scene.sizeMultiplier.toFixed(2)}x`);
-  scene.modeText.setText(`Mode: ${mode.label} | Map: ${map.label} | Enemy: ${enemy.label}`);
 
   const barX = 108;
-  const barY = 110;
+  const barY = 54;
   const barW = 64;
   const barH = 18;
   const fillPct = Phaser.Math.Clamp(scene.flashlightBattery / scene.flashlightBatteryMax, 0, 1);

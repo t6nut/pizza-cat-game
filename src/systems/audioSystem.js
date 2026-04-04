@@ -20,7 +20,7 @@ export function stopBackgroundMusic(scene) {
 }
 
 export function playMusicStep(scene) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
 
@@ -57,7 +57,7 @@ export function resumeAudio(scene) {
 }
 
 export function playEnemyEatSound(scene, strength) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
@@ -76,7 +76,7 @@ export function playEnemyEatSound(scene, strength) {
 }
 
 export function playCatchSound(scene, strength) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
@@ -95,7 +95,7 @@ export function playCatchSound(scene, strength) {
 }
 
 export function playEatSound(scene, strength) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
@@ -114,21 +114,21 @@ export function playEatSound(scene, strength) {
 }
 
 export function playAirplaneSound(scene, durationMs = 2800) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
   const gain = scene.audioCtx.createGain();
   const now = scene.audioCtx.currentTime;
-  const duration = Math.max(1.2, durationMs / 1000);
-  const attack = Math.min(0.22, duration * 0.12);
+  const duration = Math.max(0.7, durationMs / 1000 * 0.55);
+  const attack = Math.min(0.12, duration * 0.1);
   const sustainLevel = 0.03;
   osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(84, now);
-  osc.frequency.linearRampToValueAtTime(68, now + duration * 0.9);
+  osc.frequency.setValueAtTime(160, now);
+  osc.frequency.linearRampToValueAtTime(48, now + duration);
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.linearRampToValueAtTime(0.045, now + attack);
-  gain.gain.linearRampToValueAtTime(sustainLevel, now + Math.max(attack + 0.05, duration - 0.22));
+  gain.gain.linearRampToValueAtTime(sustainLevel, now + Math.max(attack + 0.05, duration - 0.25));
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   osc.connect(gain);
   gain.connect(scene.audioCtx.destination);
@@ -137,7 +137,7 @@ export function playAirplaneSound(scene, durationMs = 2800) {
 }
 
 export function playDogBarkSound(scene) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
@@ -156,7 +156,7 @@ export function playDogBarkSound(scene) {
 }
 
 export function playZombieStompSound(scene) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
   const osc = scene.audioCtx.createOscillator();
@@ -175,7 +175,7 @@ export function playZombieStompSound(scene) {
 }
 
 export function playChefTossSound(scene) {
-  if (!scene.audioCtx) {
+  if (!scene.audioCtx || scene.audioMuted) {
     return;
   }
 
@@ -197,4 +197,8 @@ export function playChefTossSound(scene) {
     osc.start(start);
     osc.stop(start + 0.09);
   }
+}
+
+export function toggleMute(scene) {
+  scene.audioMuted = !scene.audioMuted;
 }

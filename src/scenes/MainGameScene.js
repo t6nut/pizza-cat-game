@@ -325,7 +325,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   updateHud() {
-    updateHudElements(this, MODE_SETTINGS, MAP_SETTINGS, ENEMY_SETTINGS);
+    updateHudElements(this);
   }
 
   getCurrentMode() {
